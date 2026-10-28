@@ -1,0 +1,18 @@
+# 네임스페이스에서 클러스터 밖으로 나가는 트래픽을 전부 차단한다 (cluster-admin 전용).
+# - 네임스페이스당 하나, 이름은 반드시 "default"
+# - 클러스터 내부(파드/서비스) 트래픽에는 적용되지 않는다
+# - 네임스페이스 전체(모든 파드)에 적용되므로 모델 전용 네임스페이스에 쓴다
+# - 노드/API 서버의 IP 도 외부로 취급되어 차단된다 (모델 파드는 API 서버 접근이 필요 없음)
+apiVersion: k8s.ovn.org/v1
+kind: EgressFirewall
+metadata:
+  name: default
+  namespace: MODEL_NAMESPACE
+spec:
+  egress:
+    - type: Deny
+      to:
+        cidrSelector: 0.0.0.0/0
+    - type: Deny
+      to:
+        cidrSelector: ::/0

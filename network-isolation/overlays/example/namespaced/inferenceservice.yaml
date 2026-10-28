@@ -1,0 +1,37 @@
+# 반입한 모델을 ModelCar(OCI 이미지)로 배포하는 예시
+# - 이미지는 노드(kubelet)가 받으므로 파드에 모델 다운로드용 egress 가 필요 없다
+# - 이미지는 hf-modelcar 로 만든다. --push 후 출력되는 digest(oci://...@sha256:...)를 storageUri 에 쓰면
+#   반입 심사한 내용과 정확히 일치시킬 수 있다 (태그는 바뀔 수 있음)
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: qwen3-14b-awq
+  annotations:
+    openshift.io/display-name: Qwen3-14B-AWQ
+    serving.kserve.io/deploymentMode: RawDeployment
+  labels:
+    opendatahub.io/dashboard: "true"
+spec:
+  predictor:
+    # 토큰을 마운트하지 않는 ServiceAccount (namespace/serviceaccount.yaml)
+    serviceAccountName: model-serving
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: vllm-cuda-runtime
+      storageUri: oci://registry.internal.example/models/qwen3-14b-awq:31c69efc
+      env:
+        # 런타임/라이브러리의 외부 호출(모델 다운로드, 사용 통계)을 끈다
+        - name: HF_HUB_OFFLINE
+          value: "1"
+        - name: TRANSFORMERS_OFFLINE
+          value: "1"
+        - name: VLLM_NO_USAGE_STATS
+          value: "1"
+        - name: DO_NOT_TRACK
+          value: "1"
+      resources:
+        limits:
+          nvidia.com/gpu: "1"
+        requests:
+          nvidia.com/gpu: "1"

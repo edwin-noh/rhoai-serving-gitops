@@ -1,0 +1,26 @@
+# 모델 네임스페이스에 적용하는 부분
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kblife-models
+resources:
+  - ../../../namespace
+  - inferenceservice.yaml
+patches:
+  # 허용 대상 (cluster/ 의 AdminNetworkPolicy pass-allowed-target 과 같은 값으로)
+  - target:
+      kind: NetworkPolicy
+      name: model-allow-target
+    patch: |-
+      - op: replace
+        path: /spec/egress
+        value:
+          - to:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: rag-system
+                podSelector:
+                  matchLabels:
+                    app: vector-db
+            ports:
+              - protocol: TCP
+                port: 6333

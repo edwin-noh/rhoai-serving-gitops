@@ -1,0 +1,13 @@
+# 모델 파드의 egress 를 기본 차단한다. 아래 allow-* 정책으로 허용한 것만 나갈 수 있다.
+# Egress 만 지정하므로 ingress(Route, 모니터링 수집)와 요청에 대한 응답은 영향 없다.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: model-default-deny-egress
+spec:
+  podSelector:
+    matchExpressions:
+      - key: serving.kserve.io/inferenceservice
+        operator: Exists
+  policyTypes:
+    - Egress

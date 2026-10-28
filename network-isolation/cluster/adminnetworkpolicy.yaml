@@ -1,0 +1,66 @@
+# 클러스터 범위 상위 정책 (cluster-admin 전용, 프로젝트 관리자가 수정/삭제 불가)
+# 모델 파드의 egress 를 DNS / 같은 네임스페이스 / 허용 대상만 열고, 나머지 네임스페이스는 차단한다.
+#   Allow: 최종 허용 (NetworkPolicy 평가 안 함)
+#   Pass : NetworkPolicy 에 판단을 넘김 (세부 제어는 namespace/ 의 NetworkPolicy)
+#   Deny : 최종 차단 (NetworkPolicy 로 열 수 없음)
+# MODEL_NAMESPACE / TARGET_* 는 overlay 에서 패치한다.
+apiVersion: policy.networking.k8s.io/v1alpha1
+kind: AdminNetworkPolicy
+metadata:
+  name: model-isolation
+spec:
+  # OVN-Kubernetes 는 0~99, 낮을수록 우선
+  priority: 50
+  subject:
+    pods:
+      namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: MODEL_NAMESPACE
+      # KServe 가 예측 파드에 붙이는 라벨. 같은 프로젝트의 워크벤치 등은 대상이 아니다
+      podSelector:
+        matchExpressions:
+          - key: serving.kserve.io/inferenceservice
+            operator: Exists
+  egress:
+    - name: allow-dns
+      action: Allow
+      to:
+        - pods:
+            namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: openshift-dns
+            podSelector:
+              matchLabels:
+                dns.operator.openshift.io/daemonset-dns: default
+      # 서비스 포트(53)가 아니라 DNS 파드의 실제 포트
+      ports:
+        - portNumber:
+            protocol: UDP
+            port: 5353
+        - portNumber:
+            protocol: TCP
+            port: 5353
+    - name: pass-same-namespace
+      action: Pass
+      to:
+        - namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: MODEL_NAMESPACE
+    - name: pass-allowed-target
+      action: Pass
+      to:
+        - pods:
+            namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: TARGET_NAMESPACE
+            podSelector:
+              matchLabels:
+                app: TARGET_APP
+      ports:
+        - portNumber:
+            protocol: TCP
+            port: 1
+    - name: deny-other-namespaces
+      action: Deny
+      to:
+        - namespaces: {}

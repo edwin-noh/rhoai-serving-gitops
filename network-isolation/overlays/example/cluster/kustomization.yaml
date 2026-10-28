@@ -1,0 +1,41 @@
+# cluster-admin 이 적용하는 부분. 네임스페이스마다 이 디렉터리를 복사해서 값만 바꾼다.
+#   모델 네임스페이스: kblife-models
+#   허용 대상: rag-system 네임스페이스의 app=vector-db 파드 6333/TCP
+# (namespace: 필드는 쓰지 않는다. AdminNetworkPolicy 는 클러스터 범위 리소스다)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../cluster
+patches:
+  - target:
+      kind: AdminNetworkPolicy
+      name: model-isolation
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: model-isolation-kblife-models
+      - op: replace
+        path: /spec/subject/pods/namespaceSelector/matchLabels/kubernetes.io~1metadata.name
+        value: kblife-models
+      # egress[1] = pass-same-namespace
+      - op: replace
+        path: /spec/egress/1/to/0/namespaces/matchLabels/kubernetes.io~1metadata.name
+        value: kblife-models
+      # egress[2] = pass-allowed-target (namespace/networkpolicy-allow-target 과 같은 값으로)
+      - op: replace
+        path: /spec/egress/2/to/0/pods/namespaceSelector/matchLabels/kubernetes.io~1metadata.name
+        value: rag-system
+      - op: replace
+        path: /spec/egress/2/to/0/pods/podSelector/matchLabels
+        value:
+          app: vector-db
+      - op: replace
+        path: /spec/egress/2/ports/0/portNumber/port
+        value: 6333
+  - target:
+      kind: EgressFirewall
+      name: default
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: kblife-models
