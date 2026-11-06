@@ -1,0 +1,43 @@
+# 모델 서빙용 GPU 1장 프로파일. InferenceService 의 opendatahub.io/hardware-profile-name 으로 참조한다.
+# - 대시보드는 Accelerator 항목(nvidia.com/gpu)을 보고 vLLM NVIDIA GPU 런타임을 추천한다
+# - scheduling 의 toleration/nodeSelector 는 webhook 이 예측 파드에 넣어 준다
+apiVersion: infrastructure.opendatahub.io/v1
+kind: HardwareProfile
+metadata:
+  name: gpu-1x
+  namespace: redhat-ods-applications
+  annotations:
+    opendatahub.io/display-name: NVIDIA GPU x1
+    opendatahub.io/description: "모델 서빙용 NVIDIA GPU 1장"
+    opendatahub.io/disabled: "false"
+  labels:
+    app.kubernetes.io/part-of: hardwareprofile
+    app.opendatahub.io/hardwareprofile: "true"
+spec:
+  identifiers:
+    - identifier: cpu
+      displayName: CPU
+      resourceType: CPU
+      minCount: 1
+      defaultCount: 4
+      maxCount: 8
+    - identifier: memory
+      displayName: Memory
+      resourceType: Memory
+      minCount: 8Gi
+      defaultCount: 24Gi
+      maxCount: 32Gi
+    - identifier: nvidia.com/gpu
+      displayName: NVIDIA GPU
+      resourceType: Accelerator
+      minCount: 1
+      defaultCount: 1
+      maxCount: 1
+  scheduling:
+    type: Node
+    node:
+      # GPU 노드 taint (GPU 노드에 taint 를 걸지 않았다면 없어도 된다)
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule

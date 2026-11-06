@@ -7,7 +7,7 @@ apiVersion: k8s.ovn.org/v1
 kind: EgressFirewall
 metadata:
   name: default
-  namespace: MODEL_NAMESPACE
+  namespace: kbl-models
 spec:
   egress:
     - type: Deny

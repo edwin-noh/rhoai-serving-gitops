@@ -1,9 +1,8 @@
-# 허용할 다른 네임스페이스의 endpoint. overlay 에서 egress 를 패치한다.
-# 서비스 이름/포트가 아니라 대상 파드의 라벨과 컨테이너 포트(targetPort)로 지정해야 한다.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: model-allow-target
+  name: model-allow-dns
+  namespace: kbl-models
 spec:
   podSelector:
     matchExpressions:
@@ -15,10 +14,13 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: TARGET_NAMESPACE
+              kubernetes.io/metadata.name: openshift-dns
           podSelector:
             matchLabels:
-              app: TARGET_APP
+              dns.operator.openshift.io/daemonset-dns: default
+      # 서비스 포트(53)가 아니라 DNS 파드의 실제 포트 (NetworkPolicy 는 DNAT 이후에 평가)
       ports:
+        - protocol: UDP
+          port: 5353
         - protocol: TCP
-          port: 1
+          port: 5353

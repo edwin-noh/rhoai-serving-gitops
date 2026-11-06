@@ -1,0 +1,13 @@
+# kbl-models 전체의 GPU 상한. AI팀이 ISVC 를 늘려도 클러스터의 다른 GPU 워크로드 몫을 가져가지 못하게 한다.
+# - 값은 kbl-models 에 배정한 GPU 수 + 롤링 업데이트 여유(새 파드가 GPU 를 하나 더 요청)
+# - GPU 를 kbl-models 만 쓰는 클러스터라면 노드 GPU 수가 이미 상한이므로 replica 실수 방지 정도의 의미다
+# - cpu/memory quota 는 넣지 않는다. KServe 가 추가하는 컨테이너(ModelCar 사이드카 등)에 requests 가 없으면
+#   파드 생성이 거부된다
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: gpu
+  namespace: kbl-models
+spec:
+  hard:
+    requests.nvidia.com/gpu: "8"

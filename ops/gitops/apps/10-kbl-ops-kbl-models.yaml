@@ -1,0 +1,23 @@
+# 모델 네임스페이스 (네임스페이스, quota, 네트워크 격리, RBAC, 런타임)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kbl-ops-kbl-models
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: kbl-ops
+  source:
+    repoURL: https://github.com/edwin-noh/model-lifecycle.git
+    targetRevision: main
+    path: deploy/ops/kbl-models
+    directory:
+      recurse: true   # network/, runtimes/ 포함
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kbl-models
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false    # 런타임 삭제는 쓰는 모델이 없는지 확인하고 직접 한다

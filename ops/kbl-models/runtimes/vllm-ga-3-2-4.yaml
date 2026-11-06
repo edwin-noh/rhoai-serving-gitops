@@ -1,0 +1,59 @@
+# vLLM 런타임 (등급 ga, RHAIIS vllm-cuda-rhel9 3.2.4). 대시보드의 vllm-cuda-runtime-template 과 같은 형식이다.
+# - 이름은 vllm-<등급>-<버전>. ISVC 는 이름으로만 참조하므로 이름만 보고 등급을 알 수 있게 한다
+# - 이미지는 승인 후 Nexus vllm-<등급> repo 에 digest 로 반입한 것만 쓴다
+# - support-status: ga=supported, fast=limited, upstream=unsupported
+# - Ops팀이 관리한다. AI팀은 조회만 하고 ISVC 의 runtime 으로 이름을 참조한다
+# - 모델마다 다른 인자(--max-model-len, --tool-call-parser 등)는 여기가 아니라 InferenceService args 에 둔다
+# - ModelCar 이미지의 /models 가 /mnt/models 로 연결된다
+# - 모든 런타임은 모든 HardwareProfile(gpu-1x, gpu-2x)에서 동작해야 하므로 /dev/shm 을 둔다
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: vllm-ga-3-2-4
+  namespace: kbl-models
+  annotations:
+    kbl.io/support-status: supported
+    opendatahub.io/apiProtocol: REST
+    opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+    opendatahub.io/runtime-version: "3.2.4"
+    opendatahub.io/template-name: vllm-cuda-runtime-template
+    opendatahub.io/template-display-name: vLLM NVIDIA GPU ServingRuntime for KServe
+    openshift.io/display-name: vLLM 3.2.4 (GA)
+  labels:
+    kbl.io/runtime-tier: ga
+    opendatahub.io/dashboard: "true"
+spec:
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: "8080"
+  multiModel: false
+  supportedModelFormats:
+    - name: vLLM
+      autoSelect: true
+  containers:
+    - name: kserve-container
+      # registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.2.4 를 반입한 것. 실제 digest 로 바꾼다
+      image: nexus.internal.example:5000/vllm-ga/vllm-cuda-rhel9@sha256:0000000000000000000000000000000000000000000000000000000000000000
+      command:
+        - python
+        - -m
+        - vllm.entrypoints.openai.api_server
+      args:
+        - --port=8080
+        - --model=/mnt/models
+        - --served-model-name={{.Name}}
+      env:
+        - name: HF_HOME
+          value: /tmp/hf_home
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+  volumes:
+    # tensor parallel 시 GPU 간 통신용 공유 메모리. 파드 메모리 limit 에 포함된다
+    - name: shm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 4Gi

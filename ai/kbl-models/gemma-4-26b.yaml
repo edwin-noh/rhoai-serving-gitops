@@ -1,0 +1,67 @@
+# google/gemma-4-26b-it (커뮤니티 모델, upstream 런타임, GPU 2장) — 예시
+# AI팀이 관리한다. 허용되는 필드와 규칙은 deploy/ai/README.md
+# - GA 런타임에 없는 vLLM 0.28 이 필요해 upstream 런타임(ops/kbl-models/runtimes/vllm-upstream-0-28-0.yaml)을 쓴다.
+#   GA 런타임에 0.28 이 들어오면 kbl.io/runtime-tier 와 runtime 을 함께 바꾼다 (엔드포인트 그대로)
+# - Gemma 는 자체 이용 약관이 적용된다. MODEL_INFO.json 의 라이선스 검토/승인 후 배포한다
+# - bf16 가중치가 약 52GB 라 GPU 2장(gpu-2x)에 tensor parallel 로 나눈다. FP8 버전이면 1장(gpu-1x)도 가능
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: gemma-4-26b
+  namespace: kbl-models
+  annotations:
+    openshift.io/display-name: Gemma-4-26B-IT
+    # 모델 카탈로그(CATALOG.md)에 표시된다
+    openshift.io/description: "중형 지시 모델 (커뮤니티, upstream 런타임). 평가용"
+    serving.kserve.io/deploymentMode: Standard
+    # ops/platform/hardwareprofile-gpu-2x.yaml. toleration/nodeSelector 를 webhook 이 넣어 준다
+    opendatahub.io/hardware-profile-name: gpu-2x
+    opendatahub.io/hardware-profile-namespace: redhat-ods-applications
+    opendatahub.io/model-type: generative
+    # 토큰 인증 사이드카는 SA 토큰으로 API 서버를 호출하므로 네트워크 격리와 충돌한다.
+    # 인증은 앞단 게이트웨이에서 처리한다 (ops/network-isolation/README.md)
+    security.opendatahub.io/enable-auth: "false"
+  labels:
+    kbl.io/runtime-tier: upstream
+    kbl.io/model-source: community
+    opendatahub.io/dashboard: "true"
+spec:
+  predictor:
+    # 토큰을 마운트하지 않는 ServiceAccount (ops/kbl-models/30-serviceaccount.yaml)
+    serviceAccountName: model-serving
+    automountServiceAccountToken: false
+    minReplicas: 1
+    maxReplicas: 1
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: vllm-upstream-0-28-0
+      storageUri: oci://nexus.internal.example:5000/models-community/google/gemma-4-26b-it@sha256:0000000000000000000000000000000000000000000000000000000000000000
+      args:
+        # GPU 수(resources 의 nvidia.com/gpu)와 같게
+        - --tensor-parallel-size=2
+        # 모델 기본 컨텍스트 길이가 크면 KV 캐시가 GPU 메모리에 들어가지 않아 기동에 실패한다
+        - --max-model-len=32768
+        # 에이전트용으로 쓰려면 tool calling 을 켠다. 이 모델에 맞는 파서를 vLLM 문서에서 확인한 뒤 주석을 푼다
+        # - --enable-auto-tool-choice
+        # - --tool-call-parser=<파서>
+      env:
+        # 런타임/라이브러리의 외부 호출(모델 다운로드, 사용 통계)을 끈다
+        - name: HF_HUB_OFFLINE
+          value: "1"
+        - name: TRANSFORMERS_OFFLINE
+          value: "1"
+        - name: VLLM_NO_USAGE_STATS
+          value: "1"
+        - name: DO_NOT_TRACK
+          value: "1"
+      # hardware profile(gpu-2x) 범위 안에서 지정한다. memory 에는 런타임의 /dev/shm(4Gi)이 포함된다
+      resources:
+        limits:
+          cpu: "16"
+          memory: 96Gi
+          nvidia.com/gpu: "2"
+        requests:
+          cpu: "8"
+          memory: 64Gi
+          nvidia.com/gpu: "2"

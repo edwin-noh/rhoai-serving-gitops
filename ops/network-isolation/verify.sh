@@ -4,7 +4,7 @@
 # 사용법: ./verify.sh <namespace> <inferenceservice> <host:port:expect>...
 #   expect: allow(연결 성공해야 함) | deny(연결 실패해야 함)
 # 예:
-#   ./verify.sh kblife-models qwen3-14b-awq \
+#   ./verify.sh kbl-models qwen3-4b-instruct \
 #     vector-db.rag-system.svc:6333:allow \
 #     other-svc.other-ns.svc:8080:deny \
 #     huggingface.co:443:deny \

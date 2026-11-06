@@ -1,0 +1,21 @@
+# AI팀 InferenceService. AppProject 가 kbl-ai 라서 InferenceService 외 리소스는 동기화되지 않는다
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kbl-ai
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: kbl-ai
+  source:
+    repoURL: https://github.com/edwin-noh/model-lifecycle.git
+    targetRevision: main
+    path: deploy/ai/kbl-models
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kbl-models
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true     # 파일을 지우면 모델도 내린다

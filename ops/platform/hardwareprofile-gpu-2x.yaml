@@ -1,0 +1,43 @@
+# GPU 2장 프로파일 (tensor parallel). 단일 GPU 메모리에 들어가지 않는 모델용 (예: 26B bf16, 가중치 약 52GB).
+# - ISVC 는 opendatahub.io/hardware-profile-name: gpu-2x 로 참조하고 args 에 --tensor-parallel-size=2 를 준다
+# - 런타임에 /dev/shm(Memory emptyDir)이 있어야 한다 (GPU 간 통신)
+apiVersion: infrastructure.opendatahub.io/v1
+kind: HardwareProfile
+metadata:
+  name: gpu-2x
+  namespace: redhat-ods-applications
+  annotations:
+    opendatahub.io/display-name: NVIDIA GPU x2
+    opendatahub.io/description: "모델 서빙용 NVIDIA GPU 2장 (tensor parallel)"
+    opendatahub.io/disabled: "false"
+  labels:
+    app.kubernetes.io/part-of: hardwareprofile
+    app.opendatahub.io/hardwareprofile: "true"
+spec:
+  identifiers:
+    - identifier: cpu
+      displayName: CPU
+      resourceType: CPU
+      minCount: 4
+      defaultCount: 8
+      maxCount: 16
+    - identifier: memory
+      displayName: Memory
+      resourceType: Memory
+      minCount: 32Gi
+      defaultCount: 64Gi
+      maxCount: 128Gi
+    - identifier: nvidia.com/gpu
+      displayName: NVIDIA GPU
+      resourceType: Accelerator
+      minCount: 2
+      defaultCount: 2
+      maxCount: 2
+  scheduling:
+    type: Node
+    node:
+      # GPU 노드 taint (GPU 노드에 taint 를 걸지 않았다면 없어도 된다)
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule

@@ -1,0 +1,37 @@
+# Argo CD 프로젝트 (OpenShift GitOps 기본 인스턴스, Ops팀이 적용)
+# - kbl-ops: Ops팀. 클러스터 설정과 kbl-models 네임스페이스 리소스 전체
+# - kbl-ai: AI팀. kbl-models 의 InferenceService 만 동기화할 수 있다.
+#   폴더(나중에 리포)에 다른 리소스를 넣어도 Argo CD 가 동기화를 거부한다
+# 리포를 분리하면 sourceRepos 를 각 리포로 바꾼다. 폐쇄망이면 사내 Git 주소로 바꾼다
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: kbl-ops
+  namespace: openshift-gitops
+spec:
+  description: Ops팀 - RHOAI 플랫폼 설정과 모델 네임스페이스
+  sourceRepos:
+    - https://github.com/edwin-noh/model-lifecycle.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: kbl-ai
+  namespace: openshift-gitops
+spec:
+  description: AI팀 - kbl-models 의 InferenceService
+  sourceRepos:
+    - https://github.com/edwin-noh/model-lifecycle.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: kbl-models
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - group: serving.kserve.io
+      kind: InferenceService

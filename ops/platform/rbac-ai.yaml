@@ -1,0 +1,25 @@
+# AI팀이 ISVC 에 지정할 HardwareProfile 을 조회할 수 있게 한다 (프로파일은 redhat-ods-applications 에 있다).
+# kbl-models 안의 권한은 ops/kbl-models/40-rbac-ai.yaml. 그룹 이름은 사이트 값으로 바꾼다
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kbl-ai-developer-hardwareprofiles
+  namespace: redhat-ods-applications
+rules:
+  - apiGroups: ["infrastructure.opendatahub.io"]
+    resources: ["hardwareprofiles"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kbl-ai-developer-hardwareprofiles
+  namespace: redhat-ods-applications
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kbl-ai-developer-hardwareprofiles
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kbl-ai-developers

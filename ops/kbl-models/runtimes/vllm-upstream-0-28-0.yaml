@@ -1,0 +1,60 @@
+# vLLM 런타임 (등급 upstream, 커뮤니티 vllm/vllm-openai v0.28.0). GA 런타임에 아직 없는 vLLM 버전이 필요한 모델용.
+# - Red Hat 지원 대상이 아니다 (support-status: unsupported). GA 런타임에 같은 버전이 나오면 모델을 옮기고 이 런타임을 지운다
+# - 이미지는 docker.io/vllm/vllm-openai:v0.28.0 을 Nexus vllm-upstream repo 에 digest 로 반입한 것
+# - 노드 NVIDIA 드라이버가 이 이미지의 CUDA 버전을 지원하는지 먼저 확인한다
+# - 커뮤니티 이미지는 root 실행을 가정하므로, OpenShift 임의 UID 로도 쓸 수 있게 HOME/캐시 경로를 /tmp 로 둔다
+# - autoSelect 를 끈다. ISVC 가 runtime 을 지정하지 않았을 때 unsupported 런타임이 골라지지 않게 한다
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: vllm-upstream-0-28-0
+  namespace: kbl-models
+  annotations:
+    kbl.io/support-status: unsupported
+    opendatahub.io/apiProtocol: REST
+    opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+    opendatahub.io/runtime-version: "0.28.0"
+    openshift.io/display-name: vLLM 0.28.0 (upstream)
+  labels:
+    kbl.io/runtime-tier: upstream
+    opendatahub.io/dashboard: "true"
+spec:
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: "8080"
+  multiModel: false
+  supportedModelFormats:
+    - name: vLLM
+      autoSelect: false
+  containers:
+    - name: kserve-container
+      # 실제 digest 로 바꾼다
+      image: nexus.internal.example:5000/vllm-upstream/vllm-openai@sha256:0000000000000000000000000000000000000000000000000000000000000000
+      # 이미지 기본 entrypoint 대신 RHAIIS 런타임과 같은 방식으로 실행한다 (커뮤니티 이미지에는 python 이 없을 수 있음)
+      command:
+        - python3
+        - -m
+        - vllm.entrypoints.openai.api_server
+      args:
+        - --port=8080
+        - --model=/mnt/models
+        - --served-model-name={{.Name}}
+      env:
+        - name: HOME
+          value: /tmp
+        - name: XDG_CACHE_HOME
+          value: /tmp/.cache
+        - name: HF_HOME
+          value: /tmp/hf_home
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+  volumes:
+    # tensor parallel 시 GPU 간 통신용 공유 메모리. 파드 메모리 limit 에 포함된다
+    - name: shm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 4Gi

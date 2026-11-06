@@ -1,0 +1,42 @@
+# 모델 파드로 들어오는 트래픽을 허용한 곳으로만 제한한다.
+# - 모델을 호출할 에이전트/Gateway 네임스페이스에는 Ops팀이 kbl.io/model-consumer=true 라벨을 붙인다
+#   (네임스페이스 라벨은 프로젝트 관리자가 바꿀 수 없다)
+#     oc label namespace <에이전트 ns> kbl.io/model-consumer=true
+# - 메트릭 수집(User Workload Monitoring)과, 같은 네임스페이스의 모델이 아닌 파드(점검용 curl 등)는 허용한다.
+#   모델 → 모델은 egress 쪽에서 이미 차단된다
+# - kubelet 프로브와 oc port-forward 는 이 정책의 영향을 받지 않는다
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: model-allow-ingress
+  namespace: kbl-models
+spec:
+  podSelector:
+    matchExpressions:
+      - key: serving.kserve.io/inferenceservice
+        operator: Exists
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kbl.io/model-consumer: "true"
+      ports:
+        - protocol: TCP
+          port: 8080
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-user-workload-monitoring
+      ports:
+        - protocol: TCP
+          port: 8080
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: serving.kserve.io/inferenceservice
+                operator: DoesNotExist
+      ports:
+        - protocol: TCP
+          port: 8080
