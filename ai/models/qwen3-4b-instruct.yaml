@@ -39,7 +39,7 @@ spec:
       storageUri: oci://quay.io/gunoh/modelcar-qwen3-4b-instruct-2507@sha256:d3b891574f418552f5020b0d424e24180588cd23b5b2f720121cbd76684c5927
       args:
         # 모델 기본 컨텍스트 길이가 크면 KV 캐시가 GPU 메모리에 들어가지 않아 기동에 실패한다
-        - --max-model-len=16384
+        - --max-model-len=12288
         # 에이전트(function calling)용: OpenAI API 의 tools 요청을 처리한다. 파서는 모델 계열에 맞춘다
         - --enable-auto-tool-choice
         - --tool-call-parser=hermes
