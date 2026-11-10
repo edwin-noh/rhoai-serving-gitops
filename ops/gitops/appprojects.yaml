@@ -2,6 +2,7 @@
 # - kbl-ops: Ops팀. 클러스터 설정과 kbl-models 네임스페이스 리소스 전체
 # - kbl-ai: AI팀. kbl-models 의 InferenceService 만 동기화할 수 있다.
 #   폴더(나중에 리포)에 다른 리소스를 넣어도 Argo CD 가 동기화를 거부한다
+# - roles: Argo CD UI/CLI 권한. OpenShift Group 이름으로 매핑한다 (ArgoCD CR 의 전역 RBAC 는 건드리지 않음)
 # 리포를 분리하면 sourceRepos 를 각 리포로 바꾼다. 폐쇄망이면 사내 Git 주소로 바꾼다
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
@@ -18,6 +19,14 @@ spec:
   clusterResourceWhitelist:
     - group: "*"
       kind: "*"
+  roles:
+    - name: ops
+      description: Ops팀 - kbl-ops 앱 전체 권한
+      groups:
+        - kbl-ops-admins
+      policies:
+        - p, proj:kbl-ops:ops, applications, *, kbl-ops/*, allow
+        - p, proj:kbl-ops:ops, logs, get, kbl-ops/*, allow
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
@@ -35,3 +44,14 @@ spec:
   namespaceResourceWhitelist:
     - group: serving.kserve.io
       kind: InferenceService
+  roles:
+    # AI팀은 Git 에 커밋한 뒤 앱을 조회/Sync 만 한다 (앱 설정 변경·삭제 불가). Ops팀도 같은 권한으로 본다
+    - name: developers
+      description: AI팀 - kbl-ai 앱 조회와 Sync
+      groups:
+        - kbl-ai-developers
+        - kbl-ops-admins
+      policies:
+        - p, proj:kbl-ai:developers, applications, get, kbl-ai/*, allow
+        - p, proj:kbl-ai:developers, applications, sync, kbl-ai/*, allow
+        - p, proj:kbl-ai:developers, logs, get, kbl-ai/*, allow

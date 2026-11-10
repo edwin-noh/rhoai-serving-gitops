@@ -10,7 +10,7 @@ spec:
   project: kbl-ops
   source:
     repoURL: https://github.com/edwin-noh/model-lifecycle.git
-    targetRevision: main
+    targetRevision: test/rhoai-35-home
     path: deploy/ops/kbl-models
     directory:
       recurse: true   # network/, runtimes/ 포함

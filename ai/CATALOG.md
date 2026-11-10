@@ -8,5 +8,4 @@
 
 | 모델 (model) | 설명 | 엔드포인트 (OpenAI 호환) | 최대 컨텍스트 | tool calling | 런타임 등급 | 출처 | 런타임 | GPU |
 |---|---|---|---|---|---|---|---|---|
-| `gemma-4-26b` | 중형 지시 모델 (커뮤니티, upstream 런타임). 평가용 | `http://gemma-4-26b-predictor.kbl-models.svc:8080/v1` | 32768 | - | upstream | community | `vllm-upstream-0-28-0` | 2 |
-| `qwen3-4b-instruct` | 범용 소형 지시 모델. 에이전트 tool calling, RAG 응답 생성 | `http://qwen3-4b-instruct-predictor.kbl-models.svc:8080/v1` | 32768 | hermes | ga | validated | `vllm-ga-3-2-4` | 1 |
+| `qwen3-4b-instruct` | 범용 소형 지시 모델. 에이전트 tool calling, RAG 응답 생성 | `http://qwen3-4b-instruct-predictor.kbl-models.svc:8080/v1` | 16384 | hermes | ga | validated | `vllm-ga-3-5-2` | 1 |

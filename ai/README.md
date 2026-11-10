@@ -1,6 +1,6 @@
 # AI팀: InferenceService
 
-`kbl-models/` 의 파일 하나가 모델 하나(InferenceService)입니다. 커밋하면 Argo CD(`kbl-ai`)가 동기화하고,
+`models/` 의 파일 하나가 모델 하나(InferenceService)입니다. 커밋하면 Argo CD(`kbl-ai`)가 동기화하고,
 파일을 지우면 모델도 내려갑니다. 이 폴더에는 **InferenceService 만** 둘 수 있습니다 (다른 리소스는 Argo CD 가 거부).
 
 런타임(ServingRuntime), 네임스페이스, 네트워크, quota 는 Ops팀이 관리합니다 ([../ops/README.md](../ops/README.md)).
@@ -44,7 +44,7 @@ uv run hf-modelcar models/<name> \
 #    metadata.name / display-name, 라벨, runtime, storageUri, args(--max-model-len 등), resources
 
 # 3. 커밋 전 스키마 확인 (권한이 있으면)
-oc apply --dry-run=server -f deploy/ai/kbl-models/<모델>.yaml
+oc apply --dry-run=server -f deploy/ai/models/<모델>.yaml
 
 # 4. 카탈로그 갱신 (같은 커밋에 포함)
 uv run python scripts/model-catalog.py

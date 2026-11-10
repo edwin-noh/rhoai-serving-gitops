@@ -1,0 +1,38 @@
+# Ops팀이 모델 격리 정책(ANP, EgressFirewall)과 RHOAI 설정을 조회할 수 있게 한다.
+# 변경은 Git(deploy/ops) → Argo CD 로만 한다 (Argo CD application controller 가 적용)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kbl-ops-viewer
+rules:
+  - apiGroups: ["policy.networking.k8s.io"]
+    resources: ["adminnetworkpolicies", "baselineadminnetworkpolicies"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["k8s.ovn.org"]
+    resources: ["egressfirewalls"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["infrastructure.opendatahub.io"]
+    resources: ["hardwareprofiles"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["serving.kserve.io"]
+    resources: ["servingruntimes", "inferenceservices"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["user.openshift.io"]
+    resources: ["groups"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kbl-ops-viewer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kbl-ops-viewer
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kbl-ops-admins

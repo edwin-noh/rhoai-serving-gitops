@@ -1,4 +1,6 @@
-# 클러스터 설정 (DSC, HardwareProfile, CA, RBAC). 하위 디렉터리(mirror/)는 oc-mirror 입력 파일이라 포함하지 않는다
+# 클러스터 설정 (Group, RBAC, HardwareProfile). 하위 디렉터리(mirror/)는 oc-mirror 입력 파일이라 포함하지 않는다
+# - RHOAI 설치(DSC 등)는 다른 리포가 관리한다
+# - 테스트 클러스터는 기존 HardwareProfile(nvidia-gpu-serving)을 쓰므로 hardwareprofile-*.yaml 은 제외한다
 # - OpenShift GitOps 기본 인스턴스는 클러스터 범위 리소스(ANP, DSC, image.config 등) 권한이 제한되어 있다.
 #   동기화 전에 application controller 에 필요한 ClusterRole 을 부여한다
 apiVersion: argoproj.io/v1alpha1
@@ -12,13 +14,13 @@ spec:
   project: kbl-ops
   source:
     repoURL: https://github.com/edwin-noh/model-lifecycle.git
-    targetRevision: main
+    targetRevision: test/rhoai-35-home
     path: deploy/ops/platform
+    directory:
+      exclude: 'hardwareprofile-*.yaml'
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:
-    # DSC/정책을 지우면 영향이 크므로 자동 동기화와 prune 을 쓰지 않는다
+    # 클러스터 범위 권한(Group, ClusterRole)을 지우면 영향이 크므로 자동 동기화와 prune 을 쓰지 않는다
     syncOptions:
-      # DSC, image.config/cluster 는 operator 와 다른 설정이 함께 쓰는 리소스다.
-      # Server-Side Apply 로 여기 적은 필드만 소유해, 다른 쪽이 채운 필드를 덮거나 diff 로 보지 않는다
       - ServerSideApply=true

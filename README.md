@@ -32,7 +32,9 @@ OpenShift GitOps(Argo CD)로 배포하고, Ops팀과 AI팀이 폴더를 나눠 �
 |---|---|---|
 | Git | `ops/` | `ai/` |
 | Argo CD | AppProject `kbl-ops` (클러스터 전체) | AppProject `kbl-ai` (kbl-models 의 InferenceService 만) |
-| 클러스터 권한 | cluster-admin | Role `kbl-ai-developer`: ISVC 생성·수정·삭제, 나머지 조회, port-forward |
+| 클러스터 권한 | kbl-models admin + 격리 정책 조회 (변경은 Git→Argo CD) | Role `kbl-ai-developer`: kbl-models 조회 전용 (ISVC 변경은 Git→Argo CD) |
+| RHOAI 대시보드 | Auth `adminGroups` (kbl-ops-admins) | Auth `allowedGroups` (kbl-ai-developers) |
+| 사용자 | Group 멤버십 `ops/platform/groups.yaml` | |
 | Nexus | `vllm-*` push, `models-validated` push(승인자) | `models-community` push |
 | 요청 | ← 런타임 추가, 다른 네임스페이스 접근, GPU quota | |
 | 에이전트 팀 | 소비 네임스페이스 라벨(`kbl.io/model-consumer=true`) 부여 | [모델 카탈로그](ai/CATALOG.md) 관리 |

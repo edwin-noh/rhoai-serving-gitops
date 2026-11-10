@@ -12,7 +12,7 @@ spec:
   project: kbl-ops
   source:
     repoURL: https://github.com/edwin-noh/model-lifecycle.git
-    targetRevision: main
+    targetRevision: test/rhoai-35-home
     path: deploy/ops/gitops/apps
   destination:
     server: https://kubernetes.default.svc

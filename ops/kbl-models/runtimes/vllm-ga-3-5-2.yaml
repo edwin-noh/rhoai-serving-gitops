@@ -1,4 +1,4 @@
-# vLLM 런타임 (등급 ga, RHAIIS vllm-cuda-rhel9 3.2.4). 대시보드의 vllm-cuda-runtime-template 과 같은 형식이다.
+# vLLM 런타임 (등급 ga, RHAIIS vllm-cuda-rhel9 3.5.2 = upstream vLLM v0.24.0, RHOAI 3.5.2 기본 템플릿과 같은 이미지). 대시보드의 vllm-cuda-runtime-template 과 같은 형식이다.
 # - 이름은 vllm-<등급>-<버전>. ISVC 는 이름으로만 참조하므로 이름만 보고 등급을 알 수 있게 한다
 # - 이미지는 승인 후 Nexus vllm-<등급> repo 에 digest 로 반입한 것만 쓴다
 # - support-status: ga=supported, fast=limited, upstream=unsupported
@@ -9,16 +9,17 @@
 apiVersion: serving.kserve.io/v1alpha1
 kind: ServingRuntime
 metadata:
-  name: vllm-ga-3-2-4
+  name: vllm-ga-3-5-2
   namespace: kbl-models
   annotations:
     kbl.io/support-status: supported
     opendatahub.io/apiProtocol: REST
     opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
-    opendatahub.io/runtime-version: "3.2.4"
+    # upstream vLLM 버전 (RHOAI 기본 템플릿과 같은 표기). 버전 조회: ops/README.md
+    opendatahub.io/runtime-version: v0.24.0
     opendatahub.io/template-name: vllm-cuda-runtime-template
     opendatahub.io/template-display-name: vLLM NVIDIA GPU ServingRuntime for KServe
-    openshift.io/display-name: vLLM 3.2.4 (GA)
+    openshift.io/display-name: vLLM 0.24.0 (RHAIIS 3.5.2, GA)
   labels:
     kbl.io/runtime-tier: ga
     opendatahub.io/dashboard: "true"
@@ -32,8 +33,8 @@ spec:
       autoSelect: true
   containers:
     - name: kserve-container
-      # registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.2.4 를 반입한 것. 실제 digest 로 바꾼다
-      image: nexus.internal.example:5000/vllm-ga/vllm-cuda-rhel9@sha256:0000000000000000000000000000000000000000000000000000000000000000
+      # 테스트 클러스터: registry.redhat.io 에서 직접 받는다 (클러스터 global pull secret)
+      image: registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:fd9540f3882b9aae5f862eba6c295d0e9c6b43f8c17b27b179481bfa330bfbc1
       command:
         - python
         - -m

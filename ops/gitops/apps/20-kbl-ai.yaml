@@ -10,8 +10,8 @@ spec:
   project: kbl-ai
   source:
     repoURL: https://github.com/edwin-noh/model-lifecycle.git
-    targetRevision: main
-    path: deploy/ai/kbl-models
+    targetRevision: test/rhoai-35-home
+    path: deploy/ai/models
   destination:
     server: https://kubernetes.default.svc
     namespace: kbl-models

@@ -1,9 +1,9 @@
-# AI팀 권한. InferenceService 만 생성/수정/삭제하고 나머지는 조회만 한다.
+# AI팀 권한: kbl-models 조회 전용. InferenceService 변경(파라미터 조정 포함)은 Git(deploy/ai/models) → Argo CD 로만 한다.
+# - 운영 중 추가 권한이 필요하면(예: 디버깅용 port-forward) 별도 Role 을 만들어 바인딩한다
 # - 기본 edit 롤을 쓰지 않는다. edit 는 Pod/Deployment 를 직접 만들 수 있어 승인되지 않은 이미지를 실행할 수 있고,
 #   NetworkPolicy/Secret/ServiceAccount 도 바꿀 수 있다
 # - 그룹 이름은 사이트 값으로 바꾼다
-# - GitOps 로 배포할 때는 Argo CD AppProject(ops/gitops/appprojects.yaml)가 같은 범위를 강제한다.
-#   이 롤은 oc 로 직접 조회/디버깅할 때를 위한 것이다
+# - Argo CD 에서는 AppProject kbl-ai(ops/gitops/appprojects.yaml)의 role 로 앱 조회/Sync 만 할 수 있다
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -11,18 +11,11 @@ metadata:
   namespace: kbl-models
 rules:
   - apiGroups: ["serving.kserve.io"]
-    resources: ["inferenceservices"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["serving.kserve.io"]
-    resources: ["servingruntimes", "inferenceservices/status"]
+    resources: ["inferenceservices", "inferenceservices/status", "servingruntimes"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["pods", "pods/log", "events", "services", "endpoints", "resourcequotas"]
     verbs: ["get", "list", "watch"]
-  # 디버깅용 (로컬에서 모델 엔드포인트 직접 호출)
-  - apiGroups: [""]
-    resources: ["pods/portforward"]
-    verbs: ["create"]
   - apiGroups: ["apps"]
     resources: ["deployments", "replicasets"]
     verbs: ["get", "list", "watch"]
