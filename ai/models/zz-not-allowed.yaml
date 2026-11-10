@@ -1,8 +1,0 @@
-# AppProject kbl-ai 거부 테스트용 (곧 삭제)
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: not-allowed
-  namespace: kbl-models
-data:
-  a: b
