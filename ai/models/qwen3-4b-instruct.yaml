@@ -30,6 +30,9 @@ spec:
     # 토큰을 마운트하지 않는 ServiceAccount (ops/kbl-models/30-serviceaccount.yaml)
     serviceAccountName: model-serving
     automountServiceAccountToken: false
+    # GPU 가 남지 않으면 RollingUpdate 의 새 파드가 Pending 으로 멈춘다. 기존 파드를 먼저 내린다 (짧은 중단 발생)
+    deploymentStrategy:
+      type: Recreate
     minReplicas: 1
     maxReplicas: 1
     model:
