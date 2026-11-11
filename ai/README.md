@@ -34,7 +34,7 @@
 | `serviceAccountName` 을 `model-serving` 이외로 | 파드 권한·pull secret 은 Ops 가 정한 SA 로만 |
 | `automountServiceAccountToken: true` (토큰 인증을 켜지 않았는데) | API 토큰 노출. 토큰 인증(`enable-auth: "true"`)일 때만 `true` |
 | 라벨 `networking.kserve.io/visibility: exposed` | 외부 Route. 외부 노출은 Gateway 로 |
-| (참고) `security.opendatahub.io/enable-auth: "true"` | 사용 가능. 호출 권한은 Ops 에 요청(`ops/kbl-models/50-model-callers.yaml`), 호출자 ns 에 `kbl.io/model-consumer=true` 필요 |
+| `security.opendatahub.io/enable-auth: "false"` | **ISVC 는 토큰 인증 필수.** 에이전트는 8443(프록시)으로만 접근할 수 있어 인증을 끄면 호출할 수 없다. 호출 권한은 Ops 에 요청(`ops/kbl-models/50-model-callers.yaml`) |
 | 태그로 지정한 `storageUri` | digest 만 허용 (검사한 이미지와 정확히 일치시키기 위해) |
 
 ## 모델 추가

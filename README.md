@@ -50,7 +50,9 @@ AI팀이 ISVC 를 직접 수정하므로, ISVC 에서 쓰지 않을 필드(`mode
 
 ```python
 from openai import OpenAI
-client = OpenAI(base_url="http://qwen3-4b-instruct-predictor.kbl-models.svc:8080/v1", api_key="unused")
+# ISVC 는 토큰 인증 필수: 호출 SA 의 토큰을 api_key 로 (Ops 가 ops/kbl-models/50-model-callers.yaml 에 등록)
+# 자체 서명 인증서(service CA)이므로 http_client=httpx.Client(verify="/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt")
+client = OpenAI(base_url="https://qwen3-4b-instruct-predictor.kbl-models.svc:8443/v1", api_key=open("/var/run/secrets/kubernetes.io/serviceaccount/token").read())
 client.chat.completions.create(model="qwen3-4b-instruct", messages=[...], tools=[...])
 ```
 
