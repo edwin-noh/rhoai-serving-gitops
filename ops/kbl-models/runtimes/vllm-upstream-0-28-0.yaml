@@ -49,12 +49,38 @@ spec:
       ports:
         - containerPort: 8080
           protocol: TCP
+      # vLLM /health 기준 probe (llm-d 기본 템플릿과 같은 방식, 3.5 문서에 serving runtime probe 가이드는 없음)
+      # - startup: 모델 로딩 동안 liveness 가 파드를 죽이지 않게 한다 (10s x 60 = 최대 10분)
+      #   큰 모델은 ISVC spec.predictor.model.startupProbe 로 늘린다
+      # - readiness: 준비 전/과부하 시 트래픽에서 뺀다
+      # - liveness: 엔진이 멈추면(포트만 열린 상태) 재시작한다
+      startupProbe:
+        httpGet:
+          path: /health
+          port: 8080
+        periodSeconds: 10
+        failureThreshold: 60
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: 8080
+        periodSeconds: 5
+        failureThreshold: 3
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: 8080
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 10
       volumeMounts:
         - name: shm
           mountPath: /dev/shm
   volumes:
-    # tensor parallel 시 GPU 간 통신용 공유 메모리. 파드 메모리 limit 에 포함된다
+    # 공유 메모리(/dev/shm). 컨테이너 기본값은 64MB 라 tensor parallel(NCCL)에서 부족하다
+    # - tmpfs 라 미리 할당되지 않는다. 실제로 쓴 만큼만 파드 메모리 limit 에 포함된다 (TP=1 이면 거의 0)
+    # - sizeLimit 은 상한이다 (넘으면 eviction). 3.5 문서 runtime 예시와 같은 2Gi
     - name: shm
       emptyDir:
         medium: Memory
-        sizeLimit: 4Gi
+        sizeLimit: 2Gi

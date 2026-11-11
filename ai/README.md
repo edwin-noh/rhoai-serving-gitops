@@ -22,6 +22,9 @@
 **바꿀 수 있는 것**: 이름, display-name, `storageUri`(허용된 repo 의 digest), 등급/출처(위 표대로), `args`, `env`,
 `resources`(고른 HardwareProfile 과 네임스페이스 GPU quota 범위), replica 수
 
+**probe**: startup/readiness/liveness 는 런타임(ServingRuntime) 기본값을 쓴다. 로딩이 10분을 넘는 큰 모델만
+`spec.predictor.model.startupProbe` 의 `failureThreshold` 를 늘린다 (liveness 를 끄거나 줄이지 않는다)
+
 **쓰지 않는 것**
 
 | 필드 | 이유 |
