@@ -14,5 +14,5 @@ spec:
     - name: qwen3-4b-instruct
       namespace: kbl-maas
       tokenRateLimits:
-        - limit: 2000
+        - limit: 20000
           window: 1m
