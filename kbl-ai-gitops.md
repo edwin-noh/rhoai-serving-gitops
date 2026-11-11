@@ -74,8 +74,8 @@ deploy/
 | `kbl-ops-kbl-models` | 1 | kbl-ops | `ops/kbl-models` | ✅ selfHeal, prune 끔 |
 | `kbl-ops-kbl-maas` | 1 | kbl-ops | `ops/kbl-maas` | ✅ selfHeal, prune 끔 |
 | `kbl-ops-consumers` | 1 | kbl-ops | `ops/consumers` | ✅ selfHeal, prune 끔 |
-| `kbl-ai-maas` | 2 | kbl-ai | `ai/maas` | ✅ selfHeal, **prune 켬** (파일 삭제 = 모델 내림) |
-| `kbl-ai-raw` | 2 | kbl-ai | `ai/raw` | **비활성**(파일 주석, GPU 1장 PoC) |
+| `kbl-ai-maas` | 2 | kbl-ai | `ai/maas` | **비활성**(파일 주석, GPU 1장 PoC). 켜면 selfHeal, **prune 켬** |
+| `kbl-ai-raw` | 2 | kbl-ai | `ai/raw` | ✅ selfHeal, **prune 켬** (파일 삭제 = 모델 내림) |
 | `kbl-ops-maas-policy` | 3 | kbl-ops | `ops/maas-policy` | ✅ selfHeal, prune 켬 |
 
 ---
@@ -108,7 +108,9 @@ AI팀은 클러스터에서 모델을 직접 수정할 수 없다(PoC 확인: `p
 | vLLM 런타임 | `LLMInferenceServiceConfig vllm-ga-3-5-2` | `ServingRuntime vllm-ga-3-5-2` |
 | 비고 | RHOAI 3.5 에서 MaaS 는 LLMInferenceService 만 지원 (Govern…MaaS §1.10) | 대시보드에 "Legacy deployment" 로 표시되지만 지원됨 (Release notes RHOAIENG-85220) |
 
-생성형 모델은 **A** 를 쓴다. B 는 MaaS 를 거치지 않는 내부 전용 호출이 필요할 때를 위해 구조만 남겨 두었다 (`ops/gitops/apps/22-kbl-ai-raw.yaml` 주석 해제로 켬).
+> **현재 상태 (GPU 1장 PoC)**: **B** 로 서빙 중이다. A 는 `ops/gitops/apps/21-kbl-ai-maas.yaml` 과 `ops/kbl-maas/maas/qwen3-4b-instruct.yaml`(MaaSModelRef)를 주석 처리해 꺼 두었다. A 로 되돌리려면 두 파일 주석을 해제하고 22 를 주석 처리한다.
+
+생성형 모델의 목표 구성은 **A** 다. B 는 MaaS 를 거치지 않는 내부 전용 호출용이다.
 
 ---
 

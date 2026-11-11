@@ -1,13 +1,14 @@
-# MaaS 게시 (Ops팀 결정). 사용 권한·한도는 deploy/ops/maas-policy/ 에서 같은 커밋으로 관리한다
-apiVersion: maas.opendatahub.io/v1alpha1
-kind: MaaSModelRef
-metadata:
-  name: qwen3-4b-instruct
-  namespace: kbl-maas
-  annotations:
-    # LLMInferenceService(AI팀 앱)가 먼저 있어야 한다
-    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-spec:
-  modelRef:
-    kind: LLMInferenceService
-    name: qwen3-4b-instruct
+# [비활성] 대상 LLMInferenceService(gitops/apps/21-kbl-ai-maas.yaml)가 꺼져 있어 주석 처리했다. 21 과 함께 해제한다
+# # MaaS 게시 (Ops팀 결정). 사용 권한·한도는 deploy/ops/maas-policy/ 에서 같은 커밋으로 관리한다
+# apiVersion: maas.opendatahub.io/v1alpha1
+# kind: MaaSModelRef
+# metadata:
+#   name: qwen3-4b-instruct
+#   namespace: kbl-maas
+#   annotations:
+#     # LLMInferenceService(AI팀 앱)가 먼저 있어야 한다
+#     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+# spec:
+#   modelRef:
+#     kind: LLMInferenceService
+#     name: qwen3-4b-instruct

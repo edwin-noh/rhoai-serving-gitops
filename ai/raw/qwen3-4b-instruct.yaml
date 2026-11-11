@@ -1,5 +1,5 @@
 # Qwen/Qwen3-4B-Instruct-2507 (검증 모델, GA 런타임) — KServe InferenceService(RawDeployment) 방식 보관본
-# 동기화하지 않는다: Argo CD 앱 gitops/apps/22-kbl-ai-raw.yaml 이 주석 처리되어 있다 (GPU 1장, 현재는 deploy/ai/maas 의 LLMInferenceService 사용)
+# 현재 활성: Argo CD 앱 gitops/apps/22-kbl-ai-raw.yaml 이 동기화한다 (GPU 1장이라 deploy/ai/maas 의 LLMInferenceService 앱은 주석 처리)
 # AI팀이 관리한다. 허용되는 필드와 규칙은 deploy/ai/README.md
 # - 이미지는 hf-modelcar 로 만들어 Nexus models-<출처> repo 에 push 한다. --push 후 출력되는 digest 를
 #   storageUri 에 쓰면 반입 심사한 내용과 정확히 일치시킬 수 있다 (태그는 바뀔 수 있음)

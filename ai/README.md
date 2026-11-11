@@ -1,7 +1,7 @@
 # AI팀: InferenceService
 
-> 현재 생성형 모델은 `maas/`(llm-d + MaaS, 아래 절)로 배포합니다. `raw/` 의 InferenceService 는 보관본이며
-> Argo CD 앱(`ops/gitops/apps/22-kbl-ai-raw.yaml`)이 주석 처리되어 동기화되지 않습니다.
+> 현재 생성형 모델은 `raw/`(KServe InferenceService)로 배포합니다. `maas/` 의 LLMInferenceService(아래 절)는 보관본이며
+> Argo CD 앱(`ops/gitops/apps/21-kbl-ai-maas.yaml`)과 MaaSModelRef(`ops/kbl-maas/maas/`)가 주석 처리되어 동기화되지 않습니다 (GPU 1장).
 
 `raw/` 의 파일 하나가 모델 하나(InferenceService)입니다. 앱을 켜면 Argo CD(`kbl-ai-raw`)가 동기화하고,
 파일을 지우면 모델도 내려갑니다. 이 폴더에는 **InferenceService 만** 둘 수 있습니다 (다른 리소스는 Argo CD 가 거부).
