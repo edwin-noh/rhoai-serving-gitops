@@ -1,8 +1,0 @@
-apiVersion: maas.opendatahub.io/v1alpha1
-kind: MaaSSubscription
-metadata:
-  name: ai-self-grant
-  namespace: kbl-maas
-spec:
-  owner: {groups: [{name: kbl-ai-developers}]}
-  modelRefs: [{name: qwen3-4b-instruct, namespace: kbl-maas, tokenRateLimits: [{limit: 999999, window: 1m}]}]
