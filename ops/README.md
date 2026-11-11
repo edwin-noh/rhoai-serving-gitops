@@ -48,7 +48,7 @@ oc apply --dry-run=server -f deploy/ops/platform/
 # 4. 프로젝트와 루트 Application
 oc apply -f deploy/ops/gitops/appprojects.yaml
 oc apply -f deploy/ops/gitops/root-application.yaml
-#    kbl-root 가 kbl-ops-platform(wave 0) → kbl-ops-kbl-models(wave 1) → kbl-ai(wave 2) 순서로 만든다.
+#    kbl-root 가 kbl-ops-platform(wave 0) → kbl-ops-kbl-models·kbl-ops-kbl-maas(wave 1) → kbl-ai-maas(wave 2) → kbl-ops-maas-policy(wave 3) 순서로 만든다. kbl-ai-raw(22) 는 주석 처리.
 #    kbl-ops-platform 은 자동 동기화가 아니므로 내용을 확인하고 직접 Sync 한다
 
 # 5. kbl-models 가 생기면 pull secret (모델 파드는 secret 이 생길 때까지 ImagePullBackOff 로 기다린다)
