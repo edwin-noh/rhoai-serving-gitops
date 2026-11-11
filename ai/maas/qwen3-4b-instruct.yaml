@@ -9,8 +9,6 @@ metadata:
   namespace: kbl-maas
   annotations:
     openshift.io/display-name: Qwen3-4B-Instruct-2507
-    # [임시] ISVC 토큰 인증 테스트 동안 GPU 를 비운다 (llm-d §6.4)
-    serving.kserve.io/stop: "true"
     openshift.io/description: "범용 소형 지시 모델. 에이전트 tool calling, RAG 응답 생성"
   labels:
     kbl.io/runtime-tier: ga

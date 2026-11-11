@@ -2,23 +2,23 @@
 # llm-d + MaaS(21-kbl-ai-maas.yaml)로 전환하면서 동기화를 멈췄다 (GPU 1장). 파일 전체가 주석이라 app-of-apps(kbl-root)가 무시한다.
 # 다시 쓰려면 아래 주석을 해제한다. 이 앱은 InferenceService 를 kbl-models 에 만들며 AppProject kbl-ai 로 범위가 제한된다
 # AI팀 InferenceService (KServe RawDeployment)
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: kbl-ai-raw
-  namespace: openshift-gitops
-  annotations:
-    argocd.argoproj.io/sync-wave: "2"
-spec:
-  project: kbl-ai
-  source:
-    repoURL: https://github.com/edwin-noh/model-lifecycle.git
-    targetRevision: test/rhoai-35-home
-    path: deploy/ai/raw
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: kbl-models
-  syncPolicy:
-    automated:
-      selfHeal: true
-      prune: true     # 파일을 지우면 모델도 내린다
+# apiVersion: argoproj.io/v1alpha1
+# kind: Application
+# metadata:
+#   name: kbl-ai-raw
+#   namespace: openshift-gitops
+#   annotations:
+#     argocd.argoproj.io/sync-wave: "2"
+# spec:
+#   project: kbl-ai
+#   source:
+#     repoURL: https://github.com/edwin-noh/model-lifecycle.git
+#     targetRevision: test/rhoai-35-home
+#     path: deploy/ai/raw
+#   destination:
+#     server: https://kubernetes.default.svc
+#     namespace: kbl-models
+#   syncPolicy:
+#     automated:
+#       selfHeal: true
+#       prune: true     # 파일을 지우면 모델도 내린다
