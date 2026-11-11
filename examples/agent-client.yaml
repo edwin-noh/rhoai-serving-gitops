@@ -1,0 +1,91 @@
+# 에이전트팀용 예시 (Argo CD 가 동기화하지 않는다). 에이전트 네임스페이스(예: kbl-poc-agent)에 적용한다
+# 전제: Ops 가 deploy/ops/consumers/<ns>.yaml 로 등록 (네트워크 라벨 + SA agent + kbl-models RoleBinding)
+#   oc apply -n kbl-poc-agent -f deploy/examples/agent-client.yaml
+---
+# (선택) 에이전트 네임스페이스에 egress default-deny 가 있을 때만 필요
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-to-models
+spec:
+  podSelector:
+    matchLabels:
+      app: agent
+  policyTypes:
+    - Egress
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+      ports:
+        - {protocol: UDP, port: 5353}
+        - {protocol: TCP, port: 5353}
+    # kbl-models 의 ISVC (토큰 인증 프록시)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kbl-models
+      ports:
+        - {protocol: TCP, port: 8443}
+    # MaaS gateway (maas.<apps 도메인> → openshift-ingress 의 gateway 파드)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-ingress
+      ports:
+        - {protocol: TCP, port: 443}
+---
+# MaaS API 키 (Gen AI studio → API keys 에서 발급, sk-oai-...). Git 에 넣지 않는다
+# oc create secret generic maas-api-key -n kbl-poc-agent --from-literal=key=sk-oai-...
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: agent-client-example
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: agent
+    spec:
+      restartPolicy: Never
+      # Ops 가 등록한 호출 신원. 토큰이 /var/run/secrets/kubernetes.io/serviceaccount/token 에 마운트된다
+      serviceAccountName: agent
+      containers:
+        - name: client
+          image: registry.access.redhat.com/ubi9/ubi-minimal
+          env:
+            - name: ISVC_URL
+              value: https://qwen3-4b-instruct-predictor.kbl-models.svc:8443/v1
+            - name: MAAS_URL
+              value: https://maas.apps.rhoai-35.edwin.home/v1        # 사이트 값
+            - name: MAAS_MODEL
+              value: publishers/kbl-maas/models/qwen3-4b-instruct     # /v1/models 의 id
+            - name: MAAS_API_KEY
+              valueFrom:
+                secretKeyRef: {name: maas-api-key, key: key, optional: true}
+          command:
+            - sh
+            - -c
+            - |
+              TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+              CA=/etc/service-ca/service-ca.crt     # ISVC 프록시 인증서는 OpenShift service CA 가 서명
+              echo "== ISVC (SA 토큰)"
+              curl -s --cacert $CA -H "Authorization: Bearer $TOKEN" "$ISVC_URL/models" -w '\nHTTP %{http_code}\n'
+              echo "== MaaS (API 키)"
+              # maas.<도메인> 은 router 인증서. 사내 CA 면 그 CA 를 지정한다 (-k 는 예시용)
+              curl -sk -H "Authorization: Bearer $MAAS_API_KEY" -H 'Content-Type: application/json' \
+                -d "{\"model\":\"$MAAS_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":10}" \
+                "$MAAS_URL/chat/completions" -w '\nHTTP %{http_code}\n'
+          volumeMounts:
+            - name: service-ca
+              mountPath: /etc/service-ca
+              readOnly: true
+      volumes:
+        # OpenShift 가 모든 네임스페이스에 자동으로 만드는 service CA 번들
+        - name: service-ca
+          configMap:
+            name: openshift-service-ca.crt

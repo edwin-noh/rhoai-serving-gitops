@@ -37,7 +37,7 @@ OpenShift GitOps(Argo CD)로 배포하고, Ops팀과 AI팀이 폴더를 나눠 �
 | 사용자 | Group 멤버십 `ops/platform/groups.yaml` | |
 | Nexus | `vllm-*` push, `models-validated` push(승인자) | `models-community` push |
 | 요청 | ← 런타임 추가, 다른 네임스페이스 접근, GPU quota | |
-| 에이전트 팀 | 소비 네임스페이스 라벨(`kbl.io/model-consumer=true`) 부여 | [모델 카탈로그](ai/CATALOG.md) 관리 |
+| 에이전트 팀 | 호출자 등록 `ops/consumers/<ns>.yaml` (네트워크 라벨 + SA + 호출 권한), MaaS 구독 | [모델 카탈로그](ai/CATALOG.md) 관리 |
 
 AI팀이 ISVC 를 직접 수정하므로, ISVC 에서 쓰지 않을 필드(`model.image`, 커스텀 컨테이너, SA 변경, 외부 Route 등)는
 리뷰에서 확인합니다. 목록은 [ai/README.md](ai/README.md#규칙) 에 있습니다.

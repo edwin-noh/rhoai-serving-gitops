@@ -122,14 +122,12 @@ skopeo copy --all docker://registry.redhat.io/rhaiis/vllm-cuda-rhel9@sha256:<dig
 
 ### 에이전트 네임스페이스 등록
 
-모델 파드는 `kbl.io/model-consumer=true` 라벨이 있는 네임스페이스에서만 호출할 수 있습니다 (`33-networkpolicy-ingress.yaml`).
+호출자 하나 = `consumers/<에이전트 ns>.yaml` 파일 하나 (네트워크 라벨 `kbl.io/model-consumer=true` + 호출 SA + `kbl-models` RoleBinding).
+절차·해지: [consumers/README.md](consumers/README.md). 에이전트팀 클라이언트 예시: [../examples/agent-client.yaml](../examples/agent-client.yaml)
 
-```bash
-oc label namespace <에이전트 ns> kbl.io/model-consumer=true
-```
-
-에이전트 네임스페이스에 egress 제한이 있다면 그쪽에서도 `kbl-models` 의 8080 을 열어야 합니다.
-Gateway/MaaS 를 도입하면 Gateway 네임스페이스에만 라벨을 붙이고 에이전트는 Gateway 를 호출합니다.
+- ISVC 는 토큰 인증 필수 — 에이전트는 `https://<모델>-predictor.kbl-models.svc:8443` 에 SA 토큰으로 호출한다
+- 에이전트 네임스페이스에 egress 제한이 있다면 그쪽에서 `kbl-models` 의 **8443** 을 열어야 한다
+- MaaS 모델은 `maas-policy/` 의 Subscription/AuthPolicy 로 관리한다 (Kubernetes RBAC 아님)
 
 ### GPU quota
 

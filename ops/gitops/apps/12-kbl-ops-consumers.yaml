@@ -1,0 +1,23 @@
+# 모델 호출자(에이전트 네임스페이스) 등록: 네임스페이스 라벨, 호출 SA, kbl-models RoleBinding
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kbl-ops-consumers
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: kbl-ops
+  source:
+    repoURL: https://github.com/edwin-noh/model-lifecycle.git
+    targetRevision: test/rhoai-35-home
+    path: deploy/ops/consumers
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false    # 해지는 consumers/README.md 절차로 직접
+    syncOptions:
+      # Namespace 는 에이전트팀 소유. 라벨만 소유한다
+      - ServerSideApply=true
