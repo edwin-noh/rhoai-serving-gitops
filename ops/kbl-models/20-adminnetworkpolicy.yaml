@@ -42,12 +42,17 @@ spec:
             protocol: TCP
             port: 5353
     # ISVC 토큰 인증(enable-auth: true)의 kube-rbac-proxy 가 TokenReview/SubjectAccessReview 를 보낸다.
-    # 값은 API 서버 실제 주소: oc get endpoints kubernetes -n default (ClusterIP 172.30.0.1 은 이 주소로 DNAT 된다)
+    # 파드는 kubernetes Service(172.30.0.1)로 접속하고, OVN 이 모든 master 노드 IP:6443 으로 나눠 보낸다 → master 전부를 연다.
+    # IP 대신 control-plane 노드 셀렉터를 쓴다 (master 교체·증설에도 수정 불필요).
+    # IP 로 쓰려면 엔드포인트마다 /32 (oc get endpointslice -n default -l kubernetes.io/service-name=kubernetes):
+    #   - networks: [192.168.31.230/32, 192.168.31.231/32, 192.168.31.232/32]
     - name: allow-kube-apiserver
       action: Allow
       to:
-        - networks:
-            - 192.168.31.230/32
+        - nodes:
+            matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
       ports:
         - portNumber:
             protocol: TCP

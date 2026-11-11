@@ -11,10 +11,14 @@ metadata:
   namespace: kbl-models
 spec:
   egress:
-    # API 서버 (oc get endpoints kubernetes -n default). 20-adminnetworkpolicy.yaml 의 allow-kube-apiserver 와 같은 값
+    # API 서버 = 모든 control-plane 노드의 6443 (20-adminnetworkpolicy.yaml 의 allow-kube-apiserver 와 같은 대상)
+    # IP 로 쓰려면 규칙 하나에 CIDR 하나라 master 수만큼 Allow 규칙을 둔다 (cidrSelector: 192.168.31.23x/32)
     - type: Allow
       to:
-        cidrSelector: 192.168.31.230/32
+        nodeSelector:
+          matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
       ports:
         - protocol: TCP
           port: 6443
