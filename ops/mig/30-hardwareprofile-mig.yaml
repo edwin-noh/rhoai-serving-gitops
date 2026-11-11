@@ -1,0 +1,68 @@
+# MIG 조각용 HardwareProfile. 모델(ISVC/LLMISVC)이 고를 수 있는 크기를 Ops 가 정한다
+# - identifier 는 노드 allocatable 의 리소스 이름과 정확히 같아야 한다 (oc describe node 로 확인)
+# - MIG 구성(10-mig-config.yaml)의 프로파일을 바꾸면 이 파일도 같이 바꾼다
+apiVersion: infrastructure.opendatahub.io/v1
+kind: HardwareProfile
+metadata:
+  name: mig-1g-35gb
+  namespace: redhat-ods-applications
+  annotations:
+    opendatahub.io/display-name: NVIDIA B300 MIG 1g.35gb
+    opendatahub.io/description: "MIG 작은 조각 1개 (소형 모델·임베딩)"
+    opendatahub.io/disabled: "false"
+  labels:
+    app.kubernetes.io/part-of: hardwareprofile
+    app.opendatahub.io/hardwareprofile: "true"
+spec:
+  identifiers:
+    - identifier: cpu
+      displayName: CPU
+      resourceType: CPU
+      minCount: 1
+      defaultCount: 4
+      maxCount: 8
+    - identifier: memory
+      displayName: Memory
+      resourceType: Memory
+      minCount: 8Gi
+      defaultCount: 16Gi
+      maxCount: 32Gi
+    - identifier: nvidia.com/mig-1g.35gb
+      displayName: MIG 1g.35gb
+      resourceType: Accelerator
+      minCount: 1
+      defaultCount: 1
+      maxCount: 1
+---
+apiVersion: infrastructure.opendatahub.io/v1
+kind: HardwareProfile
+metadata:
+  name: mig-3g-140gb
+  namespace: redhat-ods-applications
+  annotations:
+    opendatahub.io/display-name: NVIDIA B300 MIG 3g.140gb
+    opendatahub.io/description: "MIG 중간 조각 1개 (중형 모델)"
+    opendatahub.io/disabled: "false"
+  labels:
+    app.kubernetes.io/part-of: hardwareprofile
+    app.opendatahub.io/hardwareprofile: "true"
+spec:
+  identifiers:
+    - identifier: cpu
+      displayName: CPU
+      resourceType: CPU
+      minCount: 2
+      defaultCount: 8
+      maxCount: 16
+    - identifier: memory
+      displayName: Memory
+      resourceType: Memory
+      minCount: 16Gi
+      defaultCount: 64Gi
+      maxCount: 128Gi
+    - identifier: nvidia.com/mig-3g.140gb
+      displayName: MIG 3g.140gb
+      resourceType: Accelerator
+      minCount: 1
+      defaultCount: 1
+      maxCount: 1

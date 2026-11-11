@@ -1,0 +1,11 @@
+# 모델 네임스페이스의 MIG 조각 상한 (통 GPU 상한 requests.nvidia.com/gpu 와 별개로 리소스 이름마다 둔다)
+# - 실제로는 deploy/ops/kbl-maas/10-resourcequota.yaml 에 합친다. 여기 둔 것은 예시
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: mig
+  namespace: kbl-maas
+spec:
+  hard:
+    requests.nvidia.com/mig-1g.35gb: "4"
+    requests.nvidia.com/mig-3g.140gb: "2"

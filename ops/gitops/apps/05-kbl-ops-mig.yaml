@@ -1,0 +1,23 @@
+# [비활성] MIG 구성 앱 — deploy/ops/mig (README: deploy/ops/mig/README.md)
+# 테스트 클러스터(RTX 3060)는 MIG 를 지원하지 않아 적용하지 않는다. 파일 전체가 주석이라 kbl-root 가 무시한다.
+# 활성화: 주석 해제 + 노드 이름·프로파일 수정. GPU 재분할을 일으키므로 automated sync 를 두지 않는다 (수동 Sync)
+# apiVersion: argoproj.io/v1alpha1
+# kind: Application
+# metadata:
+#   name: kbl-ops-mig
+#   namespace: openshift-gitops
+#   annotations:
+#     argocd.argoproj.io/sync-wave: "0"
+# spec:
+#   project: kbl-ops
+#   source:
+#     repoURL: https://github.com/edwin-noh/model-lifecycle.git
+#     targetRevision: test/rhoai-35-home
+#     path: deploy/ops/mig
+#   destination:
+#     server: https://kubernetes.default.svc
+#   syncPolicy:
+#     # automated 없음: Sync 는 변경 절차(README)에 따라 사람이 누른다
+#     syncOptions:
+#       # ClusterPolicy·Node 는 다른 주체와 함께 쓰는 리소스다. 여기 적은 필드만 소유한다
+#       - ServerSideApply=true

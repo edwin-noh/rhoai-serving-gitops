@@ -158,3 +158,7 @@ deploy/ops/network-isolation/verify.sh kbl-models qwen3-4b-instruct huggingface.
 - API 키는 GitOps 밖(대시보드 Gen AI studio → API keys / maas-api)에서 발급된다. 키는 발급 시점의 그룹을 기억하므로
   사용자를 그룹에서 빼면 키도 revoke 한다
 - 런타임 버전 조회: `oc get llminferenceserviceconfig -A -L kbl.io/runtime-tier -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,VLLM:.metadata.annotations.opendatahub\.io/runtime-version`
+
+## MIG
+
+GPU 를 MIG(Mixed)로 나눠 쓰는 구성과 변경 절차: [mig/README.md](mig/README.md) (Argo 앱 `gitops/apps/05-kbl-ops-mig.yaml` 은 주석 처리 — 테스트 클러스터 미적용)
