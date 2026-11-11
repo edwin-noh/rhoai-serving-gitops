@@ -4,7 +4,9 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kbl-models-model-serving-auth-delegator
+  # 이름을 <ns>-<sa>-auth-delegator 로 하지 않는다: ODH 컨트롤러가 토큰 인증 ISVC 에 같은 이름의 바인딩을
+  # 만들고 ISVC 삭제 시 지운다 (PoC 에서 이름 충돌로 이 리소스가 삭제됨). 컨트롤러가 만들어 주더라도 의존성을 명시해 둔다
+  name: kbl-model-serving-auth-delegator
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
