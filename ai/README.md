@@ -31,9 +31,10 @@
 |---|---|
 | `spec.predictor.model.image`, `model.command` | 이미지와 실행 명령은 ServingRuntime 이 정함 |
 | `spec.predictor.containers`, `initContainers`, `spec.transformer`, `spec.explainer` | 승인되지 않은 이미지 실행 경로 |
-| `serviceAccountName` 을 `model-serving` 이외로, `automountServiceAccountToken: true` | API 토큰 노출 |
+| `serviceAccountName` 을 `model-serving` 이외로 | 파드 권한·pull secret 은 Ops 가 정한 SA 로만 |
+| `automountServiceAccountToken: true` (토큰 인증을 켜지 않았는데) | API 토큰 노출. 토큰 인증(`enable-auth: "true"`)일 때만 `true` |
 | 라벨 `networking.kserve.io/visibility: exposed` | 외부 Route. 외부 노출은 Gateway 로 |
-| `security.opendatahub.io/enable-auth: "true"` | 인증 사이드카가 네트워크 격리와 충돌. 인증은 Gateway 에서 |
+| (참고) `security.opendatahub.io/enable-auth: "true"` | 사용 가능. 호출 권한은 Ops 에 요청(`ops/kbl-models/50-model-callers.yaml`), 호출자 ns 에 `kbl.io/model-consumer=true` 필요 |
 | 태그로 지정한 `storageUri` | digest 만 허용 (검사한 이미지와 정확히 일치시키기 위해) |
 
 ## 모델 추가

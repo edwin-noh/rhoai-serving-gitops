@@ -41,6 +41,17 @@ spec:
         - portNumber:
             protocol: TCP
             port: 5353
+    # ISVC 토큰 인증(enable-auth: true)의 kube-rbac-proxy 가 TokenReview/SubjectAccessReview 를 보낸다.
+    # 값은 API 서버 실제 주소: oc get endpoints kubernetes -n default (ClusterIP 172.30.0.1 은 이 주소로 DNAT 된다)
+    - name: allow-kube-apiserver
+      action: Allow
+      to:
+        - networks:
+            - 192.168.31.230/32
+      ports:
+        - portNumber:
+            protocol: TCP
+            port: 6443
     # network/allow-rag-system-vector-db.yaml
     - name: pass-rag-system-vector-db
       action: Pass

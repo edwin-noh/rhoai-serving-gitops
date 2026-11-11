@@ -1,0 +1,29 @@
+# 토큰 인증 모델의 호출 권한 (Ops팀 관리). 모델 하나 = Role 하나, 호출자(에이전트 SA/그룹) = RoleBinding subject
+# - kube-rbac-proxy 는 호출자 토큰의 주체가 해당 InferenceService 에 get 권한이 있는지 확인한다
+#   (대시보드 "Require token authentication" 이 만드는 <isvc>-view-role 과 같은 형식)
+# - 네트워크도 열려 있어야 한다: 호출자 네임스페이스에 kbl.io/model-consumer=true 라벨 (33-networkpolicy-ingress.yaml)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: call-qwen3-4b-instruct
+  namespace: kbl-models
+rules:
+  - apiGroups: ["serving.kserve.io"]
+    resources: ["inferenceservices"]
+    resourceNames: ["qwen3-4b-instruct"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: call-qwen3-4b-instruct
+  namespace: kbl-models
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: call-qwen3-4b-instruct
+subjects:
+  # 테스트용 호출자 (에이전트 네임스페이스의 SA)
+  - kind: ServiceAccount
+    name: agent
+    namespace: kbl-poc-agent

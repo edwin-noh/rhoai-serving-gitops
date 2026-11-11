@@ -1,0 +1,15 @@
+# ISVC 토큰 인증(security.opendatahub.io/enable-auth: "true")용.
+# 모델 파드의 kube-rbac-proxy 가 호출자 토큰을 검증(TokenReview)하고 권한을 확인(SubjectAccessReview)할 수 있게 한다.
+# 모델 파드 SA(kbl-models/model-serving)에 주는 권한은 이것뿐이다
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kbl-models-model-serving-auth-delegator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: model-serving
+    namespace: kbl-models

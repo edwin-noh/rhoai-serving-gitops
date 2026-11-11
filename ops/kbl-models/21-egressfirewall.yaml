@@ -2,7 +2,8 @@
 # - 네임스페이스당 하나, 이름은 반드시 "default"
 # - 클러스터 내부(파드/서비스) 트래픽에는 적용되지 않는다
 # - 네임스페이스 전체(모든 파드)에 적용되므로 모델 전용 네임스페이스에 쓴다
-# - 노드/API 서버의 IP 도 외부로 취급되어 차단된다 (모델 파드는 API 서버 접근이 필요 없음)
+# - 노드/API 서버의 IP 도 외부로 취급된다. ISVC 토큰 인증 프록시용으로 API 서버(6443)만 허용한다
+# - 규칙은 위에서부터 평가된다 (Allow 를 Deny 앞에)
 apiVersion: k8s.ovn.org/v1
 kind: EgressFirewall
 metadata:
@@ -10,6 +11,13 @@ metadata:
   namespace: kbl-models
 spec:
   egress:
+    # API 서버 (oc get endpoints kubernetes -n default). 20-adminnetworkpolicy.yaml 의 allow-kube-apiserver 와 같은 값
+    - type: Allow
+      to:
+        cidrSelector: 192.168.31.230/32
+      ports:
+        - protocol: TCP
+          port: 6443
     - type: Deny
       to:
         cidrSelector: 0.0.0.0/0
