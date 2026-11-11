@@ -143,3 +143,18 @@ oc describe quota -n kbl-models
 oc get isvc -n kbl-models -L kbl.io/runtime-tier,kbl.io/model-source
 deploy/ops/network-isolation/verify.sh kbl-models qwen3-4b-instruct huggingface.co:443:deny
 ```
+
+## MaaS (llm-d 모델)
+
+| 파일 | 역할 |
+|---|---|
+| `kbl-maas/` | 모델 네임스페이스(`maas.opendatahub.io/gateway-access=true`), quota, NetworkPolicy, RBAC |
+| `kbl-maas/runtimes/vllm-<등급>-<버전>.yaml` | llm-d vLLM 런타임 (`LLMInferenceServiceConfig`, 이미지 digest 고정). AI팀 LLMISVC 가 `baseRefs` 로 참조 |
+| `kbl-maas/maas/<모델>.yaml` | MaaS 게시 (`MaaSModelRef`) |
+| `maas-policy/subscription-*.yaml` | 사용량 한도 (`MaaSSubscription`, 그룹 단위, 사용자별 토큰/window) |
+| `maas-policy/authpolicy-*.yaml` | 인가 (`MaaSAuthPolicy`, 어떤 그룹이 어떤 모델을 호출) |
+
+- 모델 공개 = `MaaSModelRef` + `MaaSSubscription` + `MaaSAuthPolicy` 를 **한 커밋**으로 (AuthPolicy 만 있으면 429, Subscription 만 있으면 403)
+- API 키는 GitOps 밖(대시보드 Gen AI studio → API keys / maas-api)에서 발급된다. 키는 발급 시점의 그룹을 기억하므로
+  사용자를 그룹에서 빼면 키도 revoke 한다
+- 런타임 버전 조회: `oc get llminferenceserviceconfig -A -L kbl.io/runtime-tier -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,VLLM:.metadata.annotations.opendatahub\.io/runtime-version`

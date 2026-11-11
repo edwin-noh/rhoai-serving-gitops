@@ -1,0 +1,55 @@
+# Qwen/Qwen3-4B-Instruct-2507 — llm-d(LLMInferenceService)로 서빙하고 MaaS 로 노출한다.
+# AI팀이 관리한다. 바꿀 수 있는 것: model.uri(digest), replicas, resources, VLLM_ADDITIONAL_ARGS
+# 바꾸지 않는 것: baseRefs(Ops 런타임), router.gateway(MaaS gateway), image, auth annotation
+# - MaaS 게시(MaaSModelRef)와 사용 권한·한도(MaaSAuthPolicy/MaaSSubscription)는 Ops팀이 관리한다
+apiVersion: serving.kserve.io/v1alpha2
+kind: LLMInferenceService
+metadata:
+  name: qwen3-4b-instruct
+  namespace: kbl-maas
+  annotations:
+    openshift.io/display-name: Qwen3-4B-Instruct-2507
+    openshift.io/description: "범용 소형 지시 모델. 에이전트 tool calling, RAG 응답 생성"
+  labels:
+    kbl.io/runtime-tier: ga
+    kbl.io/model-source: validated
+    opendatahub.io/dashboard: "true"
+spec:
+  # Ops팀 런타임 (deploy/ops/kbl-maas/runtimes/vllm-ga-3-5-2.yaml). vLLM 이미지는 여기서 정해진다
+  baseRefs:
+    - name: vllm-ga-3-5-2
+  model:
+    uri: oci://quay.io/gunoh/modelcar-qwen3-4b-instruct-2507@sha256:d3b891574f418552f5020b0d424e24180588cd23b5b2f720121cbd76684c5927
+    # OpenAI API 의 model 이름
+    name: qwen3-4b-instruct
+  replicas: 1
+  router:
+    route: {}
+    # MaaS gateway 에 붙인다 (MaaS 인증·토큰 한도가 이 gateway 에서 적용된다)
+    gateway:
+      refs:
+        - name: maas-default-gateway
+          namespace: openshift-ingress
+    scheduler: {}
+  template:
+    containers:
+      - name: main
+        env:
+          # 기본 인자에 병합된다 (같은 인자는 이 값이 우선)
+          - name: VLLM_ADDITIONAL_ARGS
+            value: --max-model-len=12288 --enable-auto-tool-choice --tool-call-parser=hermes
+          - name: HF_HUB_OFFLINE
+            value: "1"
+          - name: VLLM_NO_USAGE_STATS
+            value: "1"
+          - name: DO_NOT_TRACK
+            value: "1"
+        resources:
+          limits:
+            cpu: "4"
+            memory: 16Gi
+            nvidia.com/gpu: "1"
+          requests:
+            cpu: "2"
+            memory: 16Gi
+            nvidia.com/gpu: "1"

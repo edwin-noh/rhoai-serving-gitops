@@ -89,3 +89,19 @@ curl -s localhost:8080/v1/models
 | 파드 `Pending` | 네임스페이스 GPU quota(`oc describe quota -n kbl-models`), GPU 노드 여유 |
 | `ImagePullBackOff` | storageUri digest 가 Nexus 에 있는지 |
 | vLLM 기동 중 OOM / KV cache 부족 | `--max-model-len` 축소, `--gpu-memory-utilization` 조정 |
+
+## llm-d + MaaS 모델 (`maas/`)
+
+`maas/` 의 파일 하나가 LLMInferenceService 하나입니다 (네임스페이스 `kbl-maas`, Argo CD 앱 `kbl-ai-maas`).
+MaaS 게시(MaaSModelRef)와 누가·얼마나 쓸 수 있는지(MaaSAuthPolicy·MaaSSubscription)는 Ops팀이 관리합니다.
+
+| 바꿀 수 있는 것 | 바꾸지 않는 것 (Ops팀 요청) |
+|---|---|
+| `model.uri`(digest), `model.name`, `replicas`, `resources`, env `VLLM_ADDITIONAL_ARGS` | `baseRefs`(vLLM 런타임), `router.gateway`(MaaS gateway), `image`, `security.opendatahub.io/enable-auth` |
+
+```bash
+oc get llmisvc -n kbl-maas
+oc get pods -n kbl-maas
+oc logs -n kbl-maas deploy/<모델>-kserve -c main | grep 'vllm version'   # vLLM 버전
+```
+호출은 MaaS API 키로 합니다: `https://maas.<apps 도메인>/v1/chat/completions` (body 의 `model` = `model.name`).

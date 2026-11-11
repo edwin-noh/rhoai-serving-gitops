@@ -1,0 +1,21 @@
+# MaaS 인증·인가(MaaSAuthPolicy)와 사용량 한도(MaaSSubscription). Ops팀 관리, models-as-a-service 네임스페이스
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kbl-ops-maas-policy
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: kbl-ops
+  source:
+    repoURL: https://github.com/edwin-noh/model-lifecycle.git
+    targetRevision: test/rhoai-35-home
+    path: deploy/ops/maas-policy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: models-as-a-service
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true     # 정책 파일을 지우면 접근도 막힌다

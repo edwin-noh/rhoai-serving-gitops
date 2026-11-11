@@ -1,0 +1,9 @@
+# kbl-maas 전체 GPU 상한 (AI팀이 replicas 를 늘려도 다른 GPU 워크로드 몫을 가져가지 못하게)
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: gpu
+  namespace: kbl-maas
+spec:
+  hard:
+    requests.nvidia.com/gpu: "2"

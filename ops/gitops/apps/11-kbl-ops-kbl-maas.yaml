@@ -1,0 +1,29 @@
+# llm-d + MaaS 모델 네임스페이스 (네임스페이스, quota, 네트워크, RBAC, llm-d 런타임, MaaS 게시)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kbl-ops-kbl-maas
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: kbl-ops
+  source:
+    repoURL: https://github.com/edwin-noh/model-lifecycle.git
+    targetRevision: test/rhoai-35-home
+    path: deploy/ops/kbl-maas
+    directory:
+      recurse: true   # runtimes/, maas/ 포함
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kbl-maas
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false
+    retry:
+      limit: 10
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m

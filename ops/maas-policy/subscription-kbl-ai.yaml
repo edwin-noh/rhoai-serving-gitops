@@ -1,0 +1,18 @@
+# MaaS 사용량 한도 (Ops팀). 그룹 단위로 묶고 한도는 사용자별로 적용된다 (토큰 기준)
+# - MaaSAuthPolicy(authpolicy-kbl-ai.yaml)와 항상 짝으로 둔다. 하나만 있으면 403/429
+# - PoC: 429 확인을 위해 낮게 둔다
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSSubscription
+metadata:
+  name: kbl-ai-developers
+  namespace: models-as-a-service
+spec:
+  owner:
+    groups:
+      - name: kbl-ai-developers
+  modelRefs:
+    - name: qwen3-4b-instruct
+      namespace: kbl-maas
+      tokenRateLimits:
+        - limit: 2000
+          window: 1m

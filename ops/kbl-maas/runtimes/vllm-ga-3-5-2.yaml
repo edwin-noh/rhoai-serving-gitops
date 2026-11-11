@@ -1,0 +1,18 @@
+# llm-d vLLM 런타임 (등급 ga, RHAIIS vllm-cuda-rhel9 3.5.2 = upstream vLLM v0.24.0). Ops팀 관리.
+# - LLMInferenceService 가 baseRefs 로 참조한다. 플랫폼 기본 템플릿 위에 이미지(digest)만 고정한다
+# - 이름은 vllm-<등급>-<버전>. 새 버전은 파일을 추가하고 AI팀이 baseRefs 를 바꾼다
+apiVersion: serving.kserve.io/v1alpha2
+kind: LLMInferenceServiceConfig
+metadata:
+  name: vllm-ga-3-5-2
+  namespace: kbl-maas
+  annotations:
+    opendatahub.io/runtime-version: v0.24.0
+    openshift.io/display-name: vLLM 0.24.0 (RHAIIS 3.5.2, GA)
+  labels:
+    kbl.io/runtime-tier: ga
+spec:
+  template:
+    containers:
+      - name: main
+        image: registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:fd9540f3882b9aae5f862eba6c295d0e9c6b43f8c17b27b179481bfa330bfbc1
