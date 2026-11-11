@@ -29,11 +29,11 @@ spec:
               kubernetes.io/metadata.name: kbl-models
       ports:
         - {protocol: TCP, port: 8443}
-    # MaaS gateway (maas.<apps 도메인> → openshift-ingress 의 gateway 파드)
+    # MaaS: maas.<apps 도메인> 은 router(ingress) 주소로 연결된다. router 는 hostNetwork 라 namespaceSelector 로는 안 잡힌다
+    # → ingress VIP(또는 router 가 도는 노드 IP)를 ipBlock 으로 연다. 확인: getent hosts maas.<apps 도메인>
     - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: openshift-ingress
+        - ipBlock:
+            cidr: 192.168.31.230/32        # 사이트 값 (ingress VIP)
       ports:
         - {protocol: TCP, port: 443}
 ---
