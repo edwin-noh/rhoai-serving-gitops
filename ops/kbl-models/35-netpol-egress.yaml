@@ -1,0 +1,32 @@
+# kbl-models 에서 나갈 수 있는 곳 (모든 파드)
+# - DNS
+# - 같은 네임스페이스 (playground → 모델 8443, playground → pgvector). 모델 → 모델은 36 의 ingress 가 8443+토큰만 받는다
+# - API 서버 6443: 토큰 인증 프록시(kube-rbac-proxy)의 TokenReview/SubjectAccessReview.
+#   NetworkPolicy 는 노드 셀렉터가 없어 머신 네트워크 CIDR 하나로 지정한다 (master 수·교체와 무관, 6443 만).
+#   사이트 값: oc get cm cluster-config-v1 -n kube-system -o jsonpath='{.data.install-config}' | grep -A1 machineNetwork
+# - 다른 네임스페이스 대상은 network/allow-*.yaml (지정 모델만)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-basic
+  namespace: kbl-models
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+      ports:
+        # 서비스 포트(53)가 아니라 DNS 파드 포트 (NetworkPolicy 는 DNAT 이후 평가)
+        - {protocol: UDP, port: 5353}
+        - {protocol: TCP, port: 5353}
+    - to:
+        - podSelector: {}
+    - to:
+        - ipBlock:
+            cidr: 192.168.31.0/24     # 사이트 값 (machineNetwork)
+      ports:
+        - {protocol: TCP, port: 6443}

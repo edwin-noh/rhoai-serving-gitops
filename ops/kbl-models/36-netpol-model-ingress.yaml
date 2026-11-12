@@ -1,0 +1,31 @@
+# 모델 파드로 들어올 수 있는 것
+# - 8443(토큰 인증 프록시) ← 같은 네임스페이스(playground 등) + Ops 가 허용한 네임스페이스(라벨 kbl.io/model-consumer=true)
+#   토큰 검증·권한(Role model-caller)은 프록시가 한다 → 토큰 없이는 어디서도 호출 불가
+# - 8080(vLLM 직결) ← 메트릭 수집(User Workload Monitoring)만. 같은 네임스페이스에서도 열지 않는다 (토큰 우회 방지)
+# - 호출자 등록(라벨 + SA + RoleBinding): deploy/ops/consumers/<ns>.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-model-ingress
+  namespace: kbl-models
+spec:
+  podSelector:
+    matchExpressions:
+      - key: serving.kserve.io/inferenceservice
+        operator: Exists
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              kbl.io/model-consumer: "true"
+      ports:
+        - {protocol: TCP, port: 8443}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-user-workload-monitoring
+      ports:
+        - {protocol: TCP, port: 8080}

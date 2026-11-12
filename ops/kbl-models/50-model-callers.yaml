@@ -13,3 +13,36 @@ rules:
   - apiGroups: ["serving.kserve.io"]
     resources: ["inferenceservices"]
     verbs: ["get"]
+---
+# 같은 네임스페이스의 Gen AI playground 용 호출 신원 (Git 관리)
+# AI팀 admin 이 Gen AI studio → AI asset endpoints → Create endpoint 에 모델 주소(https://<모델>-predictor.kbl-models.svc.cluster.local:8443/v1)와
+# 아래 Secret 의 token 을 넣는다 (Experimenting with models in the gen AI playground §2.2). 토큰을 바꾸려면 Secret 을 지우면 다시 발급된다
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: playground-caller
+  namespace: kbl-models
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: playground-caller-token
+  namespace: kbl-models
+  annotations:
+    kubernetes.io/service-account.name: playground-caller
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: caller-playground
+  namespace: kbl-models
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: model-caller
+subjects:
+  - kind: ServiceAccount
+    name: playground-caller
+    namespace: kbl-models

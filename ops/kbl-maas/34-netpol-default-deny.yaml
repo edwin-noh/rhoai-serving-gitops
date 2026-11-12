@@ -1,0 +1,11 @@
+# kbl-maas 기본 차단 (모든 파드). 35(egress)·36(ingress)로 필요한 것만 연다. 클러스터 밖도 여기서 막힌다
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: kbl-maas
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress

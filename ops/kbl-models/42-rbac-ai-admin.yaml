@@ -1,0 +1,34 @@
+# AI팀 admin(그룹 kbl-ai-admins): kbl-models 에서 Gen AI playground 를 쓰는 데 필요한 권한만
+# - edit/admin ClusterRole 은 쓰지 않는다 (NetworkPolicy·Deployment·Pod 생성 권한 포함 → 승인 안 된 워크로드·네트워크 개방 가능)
+# - 조회 권한은 40-rbac-ai.yaml(kbl-ai-developer)을 함께 받는다 (그룹 멤버를 양쪽에 넣는다)
+# - 필요한 verb 는 대시보드로 playground 를 만들며 확인한 것 (RHOAI 3.5 문서에 목록 없음 — 3.5 미확인)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kbl-ai-playground-admin
+  namespace: kbl-models
+rules:
+  - apiGroups: ["ogx.io"]
+    resources: ["ogxservers"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # 엔드포인트 토큰·playground 설정 (대시보드가 사용자 권한으로 만든다)
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kbl-ai-playground-admin
+  namespace: kbl-models
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kbl-ai-playground-admin
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kbl-ai-admins

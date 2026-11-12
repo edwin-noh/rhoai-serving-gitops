@@ -1,0 +1,25 @@
+# kbl-maas 에서 나갈 수 있는 곳 (모든 파드): DNS, 같은 네임스페이스(EPP → vLLM), API 서버 6443(EPP 가 파드·InferencePool 조회)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-basic
+  namespace: kbl-maas
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+      ports:
+        - {protocol: UDP, port: 5353}
+        - {protocol: TCP, port: 5353}
+    - to:
+        - podSelector: {}
+    - to:
+        - ipBlock:
+            cidr: 192.168.31.0/24     # 사이트 값 (machineNetwork)
+      ports:
+        - {protocol: TCP, port: 6443}

@@ -1,0 +1,15 @@
+# kbl-models 기본 차단 (네임스페이스의 모든 파드: 모델, playground, operator 가 만든 파드)
+# - 들어오는 것·나가는 것 모두 막고, 35(egress)·36(모델 ingress)·network/allow-* 와 operator 가 만든 NP 로 필요한 것만 연다
+# - 클러스터 밖으로 나가는 트래픽도 여기서 막힌다 (EgressFirewall 불필요)
+# - NetworkPolicy 는 Ops(Git)와 RHOAI operator 만 만든다 (AI팀 Role 에는 NetworkPolicy 권한 없음)
+# - kubelet 프로브와 oc port-forward 는 영향 없음
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: kbl-models
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
