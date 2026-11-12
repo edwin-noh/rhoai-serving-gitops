@@ -15,6 +15,7 @@ metadata:
     kbl.io/runtime-tier: ga
     kbl.io/model-source: validated
     opendatahub.io/dashboard: "true"
+    opendatahub.io/genai-asset: "true"
 spec:
   # Ops팀 런타임 (deploy/ops/kbl-maas/runtimes/vllm-ga-3-5-2.yaml). vLLM 이미지는 여기서 정해진다
   baseRefs:

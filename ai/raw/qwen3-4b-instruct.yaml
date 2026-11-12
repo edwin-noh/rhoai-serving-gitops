@@ -26,6 +26,7 @@ metadata:
     kbl.io/runtime-tier: ga
     kbl.io/model-source: validated
     opendatahub.io/dashboard: "true"
+    opendatahub.io/genai-asset: "true"
 spec:
   predictor:
     # 모델 파드 SA (ops/kbl-models/30-serviceaccount.yaml). 토큰 인증 프록시용으로 토큰을 마운트한다
