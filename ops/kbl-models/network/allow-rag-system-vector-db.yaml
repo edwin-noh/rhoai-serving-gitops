@@ -2,7 +2,7 @@
 # - values 에 있는 모델만 접근할 수 있다. AI팀 요청을 받아 Ops팀이 모델 이름을 추가한다
 #   (ISVC 라벨로 opt-in 하게 하면 AI팀이 스스로 네트워크를 열 수 있으므로 목록은 여기서 관리한다)
 # - 서비스 이름/포트가 아니라 대상 파드의 라벨과 컨테이너 포트(targetPort)로 지정해야 한다
-# - ../20-adminnetworkpolicy.yaml 의 pass-rag-system-vector-db 와 짝이다 (새 대상은 두 곳 모두 추가)
+# - 이 파일 하나로 끝난다 (34 default-deny 위에 egress 허용을 더함). 새 대상 = 파일 하나 추가
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
