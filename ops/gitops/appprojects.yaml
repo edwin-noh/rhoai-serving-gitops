@@ -38,6 +38,9 @@ spec:
       - {group: "", kind: Secret, name: "*-dockercfg-*"}
       - {group: "", kind: Secret, name: "*-token-*"}
       - {group: rbac.authorization.k8s.io, kind: RoleBinding, name: "system:*"}
+      # OpenShift 가 rbac Role/RoleBinding 을 같은 이름으로 한 번 더 보여 주는 API 그룹 (중복 집계 방지)
+      - {group: authorization.openshift.io, kind: Role}
+      - {group: authorization.openshift.io, kind: RoleBinding}
       # OLM 이 모든 네임스페이스에 복사하는 operator CSV
       - {group: operators.coreos.com, kind: ClusterServiceVersion}
       # GitOps operator 가 managed-by 네임스페이스에 만드는 권한
