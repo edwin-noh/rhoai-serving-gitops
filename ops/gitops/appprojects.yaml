@@ -19,6 +19,37 @@ spec:
   clusterResourceWhitelist:
     - group: "*"
       kind: "*"
+  # Git 에 없는 리소스(사람이 대시보드·oc 로 만든 것)를 앱 화면에 경고로 표시한다. 지우지는 않는다.
+  # - 대상: 이 프로젝트 앱들의 destination 네임스페이스 (kbl-models, kbl-maas, models-as-a-service, openshift-gitops)
+  # - ownerReferences 가 있는 리소스(operator·컨트롤러가 만든 것, 예: playground 의 NetworkPolicy)는 잡히지 않는다
+  # - 플랫폼이 자동으로 만드는 것은 ignore 로 뺀다
+  orphanedResources:
+    warn: true
+    ignore:
+      - {group: "", kind: ConfigMap, name: kube-root-ca.crt}
+      - {group: "", kind: ConfigMap, name: openshift-service-ca.crt}
+      - {group: "", kind: ConfigMap, name: config-service-cabundle}
+      - {group: "", kind: ConfigMap, name: config-trusted-cabundle}
+      - {group: "", kind: ConfigMap, name: odh-trusted-ca-bundle}
+      - {group: "", kind: ConfigMap, name: odh-kserve-custom-ca-bundle}
+      - {group: "", kind: ServiceAccount, name: builder}
+      - {group: "", kind: ServiceAccount, name: default}
+      - {group: "", kind: ServiceAccount, name: deployer}
+      - {group: "", kind: Secret, name: "*-dockercfg-*"}
+      - {group: "", kind: Secret, name: "*-token-*"}
+      - {group: rbac.authorization.k8s.io, kind: RoleBinding, name: "system:*"}
+      # OLM 이 모든 네임스페이스에 복사하는 operator CSV
+      - {group: operators.coreos.com, kind: ClusterServiceVersion}
+      # GitOps operator 가 managed-by 네임스페이스에 만드는 권한
+      - {group: rbac.authorization.k8s.io, kind: Role, name: "openshift-gitops-*"}
+      - {group: rbac.authorization.k8s.io, kind: RoleBinding, name: "openshift-gitops-*"}
+      # MaaS controller 가 만드는 테넌트 Role
+      - {group: rbac.authorization.k8s.io, kind: Role, name: "aitenant-*"}
+      # openshift-gitops 네임스페이스: 다른 리포가 관리하는 Application·AppProject, operator 기본 리소스
+      - {group: argoproj.io, kind: Application}
+      - {group: argoproj.io, kind: AppProject}
+      - {group: argoproj.io, kind: NotificationsConfiguration}
+      - {group: monitoring.coreos.com, kind: ServiceMonitor, name: "openshift-gitops-*"}
   roles:
     - name: ops
       description: Ops팀 - kbl-ops 앱 전체 권한

@@ -14,6 +14,8 @@ spec:
     path: deploy/ops/consumers
   destination:
     server: https://kubernetes.default.svc
+    # 리소스는 각자 namespace 를 명시한다. 이 값은 고아 리소스 검사 범위(비우면 클러스터 전체)를 좁히기 위한 것
+    namespace: openshift-gitops
   syncPolicy:
     automated:
       selfHeal: true

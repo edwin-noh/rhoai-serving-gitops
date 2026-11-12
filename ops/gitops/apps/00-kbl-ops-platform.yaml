@@ -20,6 +20,8 @@ spec:
       exclude: 'hardwareprofile-*.yaml'
   destination:
     server: https://kubernetes.default.svc
+    # 리소스는 각자 namespace 를 명시한다. 이 값은 고아 리소스 검사 범위(비우면 클러스터 전체)를 좁히기 위한 것
+    namespace: openshift-gitops
   syncPolicy:
     # 클러스터 범위 권한(Group, ClusterRole)을 지우면 영향이 크므로 자동 동기화와 prune 을 쓰지 않는다
     syncOptions:
