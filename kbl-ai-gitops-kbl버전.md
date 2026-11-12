@@ -57,7 +57,7 @@ deploy/
 ├── ops/                        운영팀
 │   ├── gitops/                 Argo CD AppProject · app-of-apps (apps/)
 │   ├── platform/               클러스터 범위: Group(사용자), RBAC, HardwareProfile
-│   ├── kbl-models/             Raw 네임스페이스: 격리(ANP·EgressFirewall·NetworkPolicy), RBAC, ServingRuntime, 호출 Role
+│   ├── kbl-models/             Raw 네임스페이스: NetworkPolicy 3개, RBAC(AI 조회·AI admin playground), ServingRuntime, 호출 Role
 │   ├── consumers/              Raw 호출자(에이전트 네임스페이스) 등록 — 호출자 하나 = 파일 하나
 │   ├── kbl-maas/               MaaS 네임스페이스: 격리, RBAC, vLLM 런타임(LLMInferenceServiceConfig), MaaS 게시(MaaSModelRef)
 │   ├── maas-policy/            MaaS 인가(MaaSAuthPolicy)·토큰 한도(MaaSSubscription)
@@ -125,61 +125,157 @@ AI팀은 클러스터에서 모델을 직접 수정할 수 없다 (PoC 확인: `
 
 ---
 
-## 5. 네트워크
+## 5. vLLM 버전·지원 등급·모델 출처 관리
 
-### 5.1 모델 네임스페이스에서 열려 있는 것 / 막혀 있는 것
+GitOps 에서는 **라벨로 표시**하고, 실제 보증은 **레지스트리(Nexus) repo 와 push 권한**으로 한다.
+라벨은 누구나 붙일 수 있으므로 "GA 라벨 = 승인된 이미지" 를 라벨이 보장하지 못한다. 대신 이미지가 어느 repo 에서 왔는지가 보장한다.
+
+```mermaid
+flowchart LR
+  subgraph NX["Nexus (레지스트리)"]
+    direction TB
+    VGA["vllm-ga"]
+    VFA["vllm-fast"]
+    VUP["vllm-upstream"]
+    MV["models-validated<br/>(승인자만 push)"]
+    MC["models-community<br/>(AI팀 push)"]
+  end
+  subgraph OPSR["운영팀 런타임 (ops/*/runtimes)"]
+    RT["vllm-{등급}-{버전}<br/>label kbl.io/runtime-tier<br/>annotation opendatahub.io/runtime-version<br/>image @sha256 ← vllm-{등급} repo"]
+  end
+  subgraph AIM["AI팀 모델 (ai/raw, ai/maas)"]
+    MD["label kbl.io/runtime-tier · kbl.io/model-source<br/>runtime / baseRefs = vllm-{등급}-{버전}<br/>storageUri / model.uri @sha256 ← models-{출처} repo"]
+  end
+  VGA & VFA & VUP --> RT
+  MV & MC --> MD
+  RT -->|이름으로 참조| MD
+```
+
+### 5.1 vLLM 버전과 지원 등급 (운영팀)
+
+| 등급 | `kbl.io/runtime-tier` | 이미지 repo (Nexus) | 런타임 이름 예 | RHOAI 상의 의미 (Configuring your model-serving platform §1.3) |
+|---|---|---|---|---|
+| GA | `ga` | `vllm-ga` (RHAIIS GA, `registry.redhat.io/rhaii/vllm-cuda-rhel9`) | `vllm-ga-3-5-2` | Supported (GA). 공식 지원 annotation 붙이지 않음 |
+| Fast | `fast` | `vllm-fast` (`registry.redhat.io/rhaii-early-access`) | `vllm-fast-3-6-0-ea1` | Limited support — `opendatahub.io/support-status: unsupported` + `opendatahub.io/unsupported-status-accepted: "true"` + `opendatahub.io/fast-version` (§1.4, §2.6) |
+| Upstream | `upstream` | `vllm-upstream` (커뮤니티 vLLM) | `vllm-upstream-0-28-0` | Unsupported (custom). 공식 annotation 없음 |
+
+| 표시 | 위치 | 의미 |
+|---|---|---|
+| 런타임 **이름** `vllm-<등급>-<버전>` | ServingRuntime(Raw), LLMInferenceServiceConfig(MaaS) | 모델은 이름으로만 참조하므로 이름만 보고 등급·버전을 안다. 여러 버전을 같이 둘 수 있다 |
+| `kbl.io/runtime-tier` | 런타임 + 모델(ISVC/LLMISVC) 라벨 | 등급 조회·리뷰용 (컨트롤러는 읽지 않음) |
+| `opendatahub.io/runtime-version` | 런타임 annotation | upstream vLLM 버전 (예: `v0.24.0`). RHOAI 기본 템플릿과 같은 표기 (관찰, 3.5 미확인) |
+| `image: …@sha256:` | 런타임 컨테이너 | 실제 실행 이미지. `vllm-<등급>` repo 에서만 가져온다 |
+
+- 현재 매니페스트에는 자체 annotation `kbl.io/support-status`(supported/unsupported)가 남아 있다. 공식 키와 의미가 달라
+  정리 대상이다 ([LABELS-ANNOTATIONS.md](LABELS-ANNOTATIONS.md) 권고): GA·Upstream 은 제거, Fast 런타임을 추가할 때 공식 annotation 3개를 붙인다
+- 새 vLLM 버전 = **새 런타임 파일 추가** (기존 런타임 수정 금지 — 그 런타임을 쓰는 모델이 모두 재기동된다). 모델은 AI팀이 하나씩 옮긴다
+- 등급 변경(예: fast → ga) = 모델 파일에서 `runtime`(또는 `baseRefs`)과 `kbl.io/runtime-tier` 를 **한 커밋**에 함께 바꾼다. 엔드포인트는 그대로
+
+### 5.2 모델 출처: validated / community (AI팀 + 승인자)
+
+| 출처 | `kbl.io/model-source` | 모델 이미지 repo (Nexus) | push 권한 | 의미 |
+|---|---|---|---|---|
+| Validated | `validated` | `models-validated` | **승인자만** | Red Hat 검증 모델 또는 사내 승인을 거친 모델 |
+| Community | `community` | `models-community` | AI팀 | 반입 검사(스캔)는 통과했지만 승인 전 |
+
+- 모델 파일의 `storageUri`(Raw) / `model.uri`(MaaS) repo 와 `kbl.io/model-source` 가 **일치**해야 한다 (PR 리뷰에서 확인)
+- 승격(community → validated): 승인자가 이미지를 `models-validated` 로 **digest 그대로 복사** (`skopeo copy --preserve-digests`) →
+  AI팀이 `storageUri` repo 와 라벨을 한 커밋으로 변경. digest 가 같으므로 검사한 모델 그대로다
+- 모델 이미지는 `hf-modelcar`(검사 게이트 통과 시에만 빌드)로 만들고 push 시 출력되는 digest 를 쓴다
+
+### 5.3 조회
+
+```bash
+# 런타임별 등급·vLLM 버전·이미지
+oc get servingruntime -A -L kbl.io/runtime-tier \
+  -o custom-columns='NS:.metadata.namespace,NAME:.metadata.name,VLLM:.metadata.annotations.opendatahub\.io/runtime-version,IMAGE:.spec.containers[0].image'
+oc get llminferenceserviceconfig -n kbl-maas -L kbl.io/runtime-tier \
+  -o custom-columns='NAME:.metadata.name,VLLM:.metadata.annotations.opendatahub\.io/runtime-version,IMAGE:.spec.template.containers[0].image'
+
+# 모델별 런타임·등급·출처
+oc get isvc -n kbl-models -L kbl.io/runtime-tier,kbl.io/model-source \
+  -o custom-columns='NAME:.metadata.name,RUNTIME:.spec.predictor.model.runtime,URI:.spec.predictor.model.storageUri'
+oc get llmisvc -n kbl-maas -L kbl.io/runtime-tier,kbl.io/model-source
+
+# 실제 실행 중인 vLLM 버전 (로그)
+oc logs -n kbl-maas deploy/<모델>-kserve -c main | grep 'vllm version'
+```
+
+### 5.4 보증의 경계
+
+| 무엇을 | 무엇이 보증하나 | 라벨의 역할 |
+|---|---|---|
+| GA 이미지만 GA 런타임에 | Nexus `vllm-ga` push 권한 + 런타임은 운영팀만 수정 | 표시 |
+| validated 모델만 validated 로 | Nexus `models-validated` push 권한(승인자) | 표시 |
+| 라벨과 실제 repo 일치 | PR 리뷰 | — |
+| 검사한 이미지 그대로 실행 | digest 참조 (`@sha256:`) | — |
+| (다음 단계) 승인 이미지만 실행 | cosign 서명 + `ClusterImagePolicy` | — |
+
+---
+
+## 6. 네트워크
+
+### 6.1 모델 네임스페이스에서 열려 있는 것 / 막혀 있는 것
+
+모델 네임스페이스마다 **NetworkPolicy 3개**로 관리한다 (Ops 가 Git 으로만 만든다. AI팀 Role 에는 NetworkPolicy 권한이 없고, 그 밖에는 RHOAI operator 만 만든다).
+
+| 파일 | 대상 | 역할 |
+|---|---|---|
+| `34-netpol-default-deny.yaml` | 네임스페이스의 모든 파드 | 들어오고 나가는 것 기본 차단 (클러스터 밖 포함) |
+| `35-netpol-egress.yaml` | 모든 파드 | DNS, 같은 네임스페이스, API 서버(머신 네트워크 CIDR:6443) |
+| `36-netpol-*-ingress.yaml` | 모델 파드 | 호출 허용 (아래 표) |
+| `network/allow-*.yaml` (Raw) | 지정 모델 | 다른 네임스페이스 대상 egress (파일 하나 = 대상 하나) |
 
 #### `kbl-models` (Raw)
 
-모델 파드(라벨 `serving.kserve.io/inferenceservice` 가 있는 파드)에 적용. 4개 계층이 겹친다.
+**들어오는 트래픽 (모델 파드)**
 
-| 계층 | 파일 | 누가 바꿀 수 있나 |
+| 출발 | 8443 (토큰 인증 프록시) | 8080 (vLLM 직결) |
 |---|---|---|
-| AdminNetworkPolicy (클러스터 범위, NetworkPolicy 보다 먼저 평가) | `ops/kbl-models/20-adminnetworkpolicy.yaml` | cluster-admin(=Git) 만 |
-| EgressFirewall (네임스페이스 전체, 클러스터 밖) | `ops/kbl-models/21-egressfirewall.yaml` | cluster-admin(=Git) 만 |
-| NetworkPolicy | `ops/kbl-models/31·32·33-*.yaml`, `network/allow-*.yaml` | Git |
-| 파드 SA | `ops/kbl-models/30-serviceaccount.yaml` (토큰은 인증 프록시용) | Git |
+| 같은 네임스페이스 (Gen AI playground 등) | ✅ 토큰 필요 (playground 는 `playground-caller` 토큰) | ❌ |
+| Ops 가 허용한 네임스페이스 (`kbl.io/model-consumer=true`) | ✅ 토큰 필요 (`ops/consumers/<ns>.yaml`) | ❌ |
+| `openshift-user-workload-monitoring` | — | ✅ 메트릭 |
+| 그 외 네임스페이스, 클러스터 밖 | ❌ | ❌ |
 
-**들어오는 트래픽 (ingress)**
+토큰 없이 vLLM 에 닿는 경로는 없다 (PoC 확인: 등록 ns·같은 ns 모두 토큰 200 / 무토큰 401 / 8080 차단, 라벨 없는 ns 는 연결 자체 차단).
+kubelet 프로브와 `oc port-forward` 는 NetworkPolicy 영향을 받지 않는다 (Ops 점검은 port-forward).
 
-| 출발 | 포트 | 결과 | 비고 |
-|---|---|---|---|
-| 라벨 `kbl.io/model-consumer=true` 네임스페이스 | **8443** (kube-rbac-proxy, https) | ✅ | 토큰 검증 후 vLLM 으로 |
-| 같은 라벨 네임스페이스 | 8080 (vLLM 직결, `<모델>-metrics` Service) | ❌ | 열면 토큰 없이 우회 호출됨 (PoC 확인 후 차단) |
-| `openshift-user-workload-monitoring` | 8080 | ✅ | 메트릭 수집 |
-| 같은 네임스페이스의 모델이 아닌 파드 (Ops 점검용) | 8080, 8443 | ✅ | |
-| 그 외 모든 네임스페이스, 클러스터 밖 | 전부 | ❌ | Route 없음 (외부 노출 금지 규칙) |
-| kubelet 프로브, `oc port-forward` | — | 영향 없음 | |
+**나가는 트래픽 (네임스페이스의 모든 파드)**
 
-**나가는 트래픽 (egress)**
-
-| 목적지 | 포트 | 결과 | 비고 |
-|---|---|---|---|
-| DNS (`openshift-dns`) | 5353 | ✅ | ANP Allow |
-| API 서버 (control-plane 노드) | 6443 | ✅ | 토큰 인증 프록시의 TokenReview/SubjectAccessReview. 노드 셀렉터라 master 3대도 자동 포함 |
-| 허용 목록 대상 (예: `rag-system` vector-db) | 6333 | 목록에 있는 모델만 ✅ | ANP Pass + `network/allow-*.yaml` |
-| 다른 네임스페이스, **같은 네임스페이스의 다른 모델** | 전부 | ❌ | ANP Deny (NetworkPolicy 로도 못 엶) |
-| 클러스터 밖 (인터넷, 사내망) | 전부 | ❌ | EgressFirewall Deny |
-| 같은 노드의 다른 포트 (예: 22) | — | ❌ | PoC 확인 |
+| 목적지 | 결과 | 비고 |
+|---|---|---|
+| DNS (`openshift-dns` 5353) | ✅ | |
+| 같은 네임스페이스 | ✅ | playground → 모델·pgvector. 받는 쪽 ingress 정책이 다시 거른다 (모델은 8443+토큰, pgvector 는 playground 만 — operator NP) |
+| API 서버 (머신 네트워크 CIDR, 6443 만) | ✅ | 토큰 인증 프록시의 TokenReview/SubjectAccessReview. master 수·교체와 무관 |
+| 허용 목록 대상 (예: `rag-system` vector-db 6333) | 목록에 있는 모델만 ✅ | `network/allow-*.yaml` |
+| 다른 네임스페이스, 클러스터 밖, 노드의 다른 포트 | ❌ | PoC 확인: quay.io·노드 22 차단 |
 
 모델 이미지(ModelCar)·vLLM 이미지는 **노드(kubelet)** 가 받으므로 파드 egress 가 필요 없다.
 
+**Gen AI playground (예외 허용)**: `kbl-models` 안에서만 모델을 부른다. 만들고 쓰는 것은 **AI팀 admin(그룹 `kbl-ai-admins`)** 만
+(`ops/kbl-models/42-rbac-ai-admin.yaml` — OGXServer·ConfigMap·Secret 권한, NetworkPolicy·Deployment 권한 없음). playground 가 만든
+NetworkPolicy(operator 소유)는 playground 파드만 대상으로 한다. 모델 엔드포인트 등록: Gen AI studio → AI asset endpoints → Create endpoint 에
+`https://<모델>-predictor.kbl-models.svc.cluster.local:8443/v1` + Secret `playground-caller-token` 의 token.
+
 #### `kbl-maas` (MaaS)
 
-| 방향 | 출발/목적지 | 결과 | 파일 |
-|---|---|---|---|
-| ingress | `openshift-ingress` (MaaS gateway 파드) | ✅ | `ops/kbl-maas/30-networkpolicy.yaml` |
-| ingress | 같은 네임스페이스 (EPP scheduler → vLLM) | ✅ | |
-| ingress | `openshift-user-workload-monitoring` | ✅ | |
-| ingress | 그 외 (에이전트 네임스페이스 포함) | ❌ | **MaaS 모델은 반드시 gateway 를 거쳐 호출** (인증·한도 우회 불가) |
-| egress | vLLM 파드 → DNS | ✅ | |
-| egress | vLLM 파드 → 그 외 | ❌ | |
-| egress | EPP scheduler → API 서버 등 | 제한 없음 | EPP 는 API 서버를 조회해야 함 |
-| — | ANP / EgressFirewall | 아직 없음 | llm-d 트래픽 경로 확인 후 추가 검토 (1차 구성) |
+| 방향 | 출발/목적지 | 결과 |
+|---|---|---|
+| ingress | `openshift-ingress` (MaaS gateway), 같은 네임스페이스 (EPP → vLLM), 모니터링 | ✅ |
+| ingress | 그 외 (에이전트 네임스페이스 포함) | ❌ **MaaS 모델은 gateway(인증·토큰 한도)를 거쳐야만 호출** (PoC 확인) |
+| egress | DNS, 같은 네임스페이스, API 서버 6443 (EPP) | ✅ |
+| egress | 그 외 (클러스터 밖 포함) | ❌ |
 
 네임스페이스 라벨 `maas.opendatahub.io/gateway-access=true` 가 있어야 MaaS gateway 가 이 네임스페이스의 HTTPRoute 를 받는다 (`ops/kbl-maas/00-namespace.yaml`).
 
-### 5.2 클러스터 안의 에이전트 앱이 호출할 때
+**감수하는 점**: NetworkPolicy 는 합산이라 operator 가 모델 파드를 대상으로 허용 NP 를 만들면 열린다 (지금 확인된 operator NP 는 playground 파드 대상).
+
+**Git 밖 리소스 감시**: AppProject `kbl-ops` 에 `orphanedResources: warn` 을 켜 두었다. 사람이 대시보드·`oc` 로 모델 네임스페이스에 만든 리소스
+(예: 대시보드로 만든 `OGXServer`)가 Argo CD 앱 화면에 "orphaned" 경고로 보인다 (지우지는 않음). 플랫폼이 자동으로 만드는 것(CA ConfigMap,
+기본 SA, OLM CSV 등)은 ignore 로 뺐고, ownerReferences 가 있는 리소스(operator 가 만든 NetworkPolicy 등)는 Argo 가 잡지 않으므로 아래 명령으로 점검한다:
+`oc get netpol -n kbl-models -o custom-columns='NAME:.metadata.name,ARGO:.metadata.annotations.argocd\.argoproj\.io/tracking-id,OWNER:.metadata.ownerReferences[0].kind,TARGET:.spec.podSelector'`
+
+### 6.2 클러스터 안의 에이전트 앱이 호출할 때
 
 ```mermaid
 flowchart LR
@@ -219,7 +315,7 @@ flowchart LR
 
 예시 매니페스트: [examples/agent-client.yaml](examples/agent-client.yaml) (egress NetworkPolicy, API 키 Secret, 두 경로 호출 Job), Python: [examples/README.md](examples/README.md)
 
-### 5.3 클러스터 밖의 에이전트가 MaaS gateway 를 거쳐 호출할 때
+### 6.3 클러스터 밖의 에이전트가 MaaS gateway 를 거쳐 호출할 때
 
 ```mermaid
 flowchart LR
@@ -255,9 +351,9 @@ curl https://maas.<apps 도메인>/v1/chat/completions \
 
 ---
 
-## 6. AI팀이 바꾸면 배포된 모델에 일어나는 일
+## 7. AI팀이 바꾸면 배포된 모델에 일어나는 일
 
-### 6.1 공통 흐름
+### 7.1 공통 흐름
 
 ```mermaid
 sequenceDiagram
@@ -276,7 +372,7 @@ sequenceDiagram
   Note over AI,Pod: 대시보드·oc 로 직접 바꾼 값은 selfHeal 이 Git 값으로 되돌린다
 ```
 
-### 6.2 Raw (`ai/raw/<모델>.yaml` → `kbl-models`)
+### 7.2 Raw (`ai/raw/<모델>.yaml` → `kbl-models`)
 
 | AI팀 변경 | 배포된 모델에 일어나는 일 | 호출자 영향 |
 |---|---|---|
@@ -294,7 +390,7 @@ sequenceDiagram
 
 GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단(새 파드 Ready 후 기존 파드 종료)으로 할 수 있다. 대신 교체 동안 GPU 가 2배 필요하다.
 
-### 6.3 MaaS (`ai/maas/<모델>.yaml` → `kbl-maas`)
+### 7.3 MaaS (`ai/maas/<모델>.yaml` → `kbl-maas`)
 
 | AI팀 변경 | 배포된 모델에 일어나는 일 | 호출자 영향 |
 |---|---|---|
@@ -305,7 +401,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 | 파일 삭제 | LLMISVC 삭제. 운영팀의 MaaSModelRef·Subscription·AuthPolicy 는 남아 `Failed` (PoC 확인) | 호출 실패 |
 | `baseRefs`·`router.gateway`·`image`·`enable-auth` | — (AI팀이 바꾸지 않음. 리뷰에서 거절) | — |
 
-### 6.4 운영팀 변경이 모델에 주는 영향 (참고)
+### 7.4 운영팀 변경이 모델에 주는 영향 (참고)
 
 | 운영팀 변경 | 영향 |
 |---|---|
@@ -314,18 +410,19 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 | `MaaSAuthPolicy` 그룹 변경 | 재기동 없음. Authorino 캐시(60초) 후 반영 |
 | `MaaSModelRef` 삭제 | MaaS 에서 모델 비공개 (파드는 계속 실행) |
 | `ops/consumers/<ns>.yaml` 삭제 + RoleBinding 삭제 | 그 에이전트의 Raw 호출 즉시 403 (프록시가 매 요청 권한 확인) |
-| NetworkPolicy/ANP/EgressFirewall | 재기동 없음, 즉시 반영 |
+| NetworkPolicy | 재기동 없음, 즉시 반영 |
 | MIG 구성 | 노드 GPU 재분할 → 해당 노드 모델 중단 (`ops/mig/README.md` 절차) |
 
 ---
 
-## 7. 제약사항 요약
+## 8. 제약사항 요약
 
 **호출**
 - Raw: 토큰 인증 필수, 클러스터 안에서만, 등록된 호출자만. 호출 권한은 `kbl-models` 의 모든 Raw 모델 단위
 - MaaS: API 키 필수, 사용자별 토큰 한도(입력+출력), 키는 발급 시점 그룹 기억 → 그룹에서 빼면 키 revoke (Govern LLM access with MaaS §1.16.3), Subscription 삭제 시 그 키 모두 무효
 - MaaS 모델 파드는 gateway 외 경로로 호출할 수 없다
-- 모델 파드는 외부·다른 네임스페이스·다른 모델로 나갈 수 없다 (Raw: API 서버 6443 만 예외). 모델이 다른 서비스를 불러야 하면 운영팀에 요청
+- 모델 네임스페이스에서는 외부·다른 네임스페이스로 나갈 수 없다 (DNS·같은 ns·API 서버 6443 만). 다른 서비스를 불러야 하면 운영팀에 요청
+- playground 는 같은 네임스페이스에서만, AI팀 admin(`kbl-ai-admins`)만 쓴다. playground 도 모델은 토큰으로 호출한다
 
 **배포**
 - 이미지·모델은 digest(`@sha256:`)로만
@@ -340,7 +437,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 
 ---
 
-## 8. 요청 절차 (누가 · 어느 파일)
+## 9. 요청 절차 (누가 · 어느 파일)
 
 | 요청 | 요청자 → 처리 | 파일 |
 |---|---|---|
@@ -349,13 +446,14 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 | 모델 MaaS 공개 | AI → Ops | `ops/kbl-maas/maas/<모델>.yaml` + `ops/maas-policy/` (한 커밋) |
 | 토큰 한도 변경 / 사용 그룹 추가 | 사용자·AI → Ops | `ops/maas-policy/subscription-*.yaml`, `authpolicy-*.yaml` |
 | 사용자 추가 | → Ops | `ops/platform/groups.yaml` (KB Life: AD 그룹) |
-| 모델이 다른 ns 서비스 호출 | AI → Ops | `ops/kbl-models/network/allow-*.yaml` + ANP `pass-*` 규칙 |
+| 모델이 다른 ns 서비스 호출 | AI → Ops | `ops/kbl-models/network/allow-*.yaml` (파일 하나) |
+| playground 사용자 추가 | AI → Ops | `ops/platform/groups.yaml` 의 `kbl-ai-admins` |
 | GPU quota | AI → Ops | `ops/kbl-models/10-resourcequota.yaml`, `ops/kbl-maas/10-resourcequota.yaml` |
 | MIG 구성 변경 | → Ops (유지보수) | `ops/mig/README.md` |
 
 ---
 
-## 9. 응답 코드·문제 해결
+## 10. 응답 코드·문제 해결
 
 | 증상 | Raw | MaaS |
 |---|---|---|
@@ -371,7 +469,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 
 ---
 
-## 10. KB Life 환경에 적용할 때 바꿀 값
+## 11. KB Life 환경에 적용할 때 바꿀 값
 
 | 항목 | PoC 값 | KB Life |
 |---|---|---|
@@ -386,7 +484,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 
 ---
 
-## 11. 관련 문서
+## 12. 관련 문서
 
 - [README.md](README.md) — deploy 개요
 - [ai/README.md](ai/README.md) — AI팀 작업 규칙 (Raw·MaaS)

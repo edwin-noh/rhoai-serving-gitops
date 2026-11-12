@@ -274,7 +274,10 @@ NetworkPolicy(operator 소유)는 playground 파드만 대상으로 한다. 모�
 네임스페이스 라벨 `maas.opendatahub.io/gateway-access=true` 가 있어야 MaaS gateway 가 이 네임스페이스의 HTTPRoute 를 받는다 (`ops/kbl-maas/00-namespace.yaml`).
 
 **감수하는 점**: NetworkPolicy 는 합산이라 operator 가 모델 파드를 대상으로 허용 NP 를 만들면 열린다 (지금 확인된 operator NP 는 playground 파드 대상).
-Git 에 없는 NP 점검:
+
+**Git 밖 리소스 감시**: AppProject `kbl-ops` 에 `orphanedResources: warn` 을 켜 두었다. 사람이 대시보드·`oc` 로 모델 네임스페이스에 만든 리소스
+(예: 대시보드로 만든 `OGXServer`)가 Argo CD 앱 화면에 "orphaned" 경고로 보인다 (지우지는 않음). 플랫폼이 자동으로 만드는 것(CA ConfigMap,
+기본 SA, OLM CSV 등)은 ignore 로 뺐고, ownerReferences 가 있는 리소스(operator 가 만든 NetworkPolicy 등)는 Argo 가 잡지 않으므로 아래 명령으로 점검한다:
 `oc get netpol -n kbl-models -o custom-columns='NAME:.metadata.name,ARGO:.metadata.annotations.argocd\.argoproj\.io/tracking-id,OWNER:.metadata.ownerReferences[0].kind,TARGET:.spec.podSelector'`
 
 ### 6.2 클러스터 안의 에이전트 앱이 호출할 때
