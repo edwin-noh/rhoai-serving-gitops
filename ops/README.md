@@ -41,15 +41,15 @@ network-isolation/                 네트워크 격리 설계 설명, verify.sh
 
 # 2. 기존 DSC 가 있으면 platform/datasciencecluster.yaml 과 합친다
 oc get dsc -o yaml
-oc apply --dry-run=server -f deploy/ops/platform/
+oc apply --dry-run=server -f ops/platform/
 
 # 3. Argo CD 준비
 #    - 기본 인스턴스는 클러스터 범위 리소스 권한이 제한되어 있으므로 application controller 에 필요한 권한을 먼저 준다
 #    - app-of-apps 가 wave 순서를 지키도록 Application health check 를 설정한다 (아래)
 
 # 4. 프로젝트와 루트 Application
-oc apply -f deploy/ops/gitops/appprojects.yaml
-oc apply -f deploy/ops/gitops/root-application.yaml
+oc apply -f ops/gitops/appprojects.yaml
+oc apply -f ops/gitops/root-application.yaml
 #    kbl-root 가 kbl-ops-platform(wave 0) → kbl-ops-kbl-models·kbl-ops-kbl-maas(wave 1) → kbl-ai-raw(wave 2) → kbl-ops-maas-policy(wave 3) 순서로 만든다. kbl-ai-maas(21) 는 주석 처리 (GPU 1장).
 #    kbl-ops-platform 은 자동 동기화가 아니므로 내용을 확인하고 직접 Sync 한다
 
@@ -141,7 +141,7 @@ kbl-models 전체 상한은 `10-resourcequota.yaml`. 롤링 업데이트 중에�
 oc get isvc,servingruntime,pods -n kbl-models
 oc describe quota -n kbl-models
 oc get isvc -n kbl-models -L kbl.io/runtime-tier,kbl.io/model-source
-deploy/ops/network-isolation/verify.sh kbl-models qwen3-4b-instruct huggingface.co:443:deny
+ops/network-isolation/verify.sh kbl-models qwen3-4b-instruct huggingface.co:443:deny
 ```
 
 ## MaaS (llm-d 모델)

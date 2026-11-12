@@ -11,9 +11,9 @@ metadata:
 spec:
   project: kbl-ops
   source:
-    repoURL: https://github.com/edwin-noh/model-lifecycle.git
-    targetRevision: test/rhoai-35-home
-    path: deploy/ops/gitops/apps
+    repoURL: https://github.com/edwin-noh/rhoai-serving-gitops.git
+    targetRevision: main
+    path: ops/gitops/apps
   destination:
     server: https://kubernetes.default.svc
     namespace: openshift-gitops

@@ -1,4 +1,4 @@
-# AI팀 권한: kbl-models 조회 전용. InferenceService 변경(파라미터 조정 포함)은 Git(deploy/ai/models) → Argo CD 로만 한다.
+# AI팀 권한: kbl-models 조회 전용. InferenceService 변경(파라미터 조정 포함)은 Git(ai/models) → Argo CD 로만 한다.
 # - 운영 중 추가 권한이 필요하면(예: 디버깅용 port-forward) 별도 Role 을 만들어 바인딩한다
 # - 기본 edit 롤을 쓰지 않는다. edit 는 Pod/Deployment 를 직접 만들 수 있어 승인되지 않은 이미지를 실행할 수 있고,
 #   NetworkPolicy/Secret/ServiceAccount 도 바꿀 수 있다

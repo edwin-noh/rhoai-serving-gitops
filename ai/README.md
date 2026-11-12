@@ -51,10 +51,10 @@ uv run hf-modelcar models/<name> \
 #    metadata.name / display-name, 라벨, runtime, storageUri, args(--max-model-len 등), resources
 
 # 3. 커밋 전 스키마 확인 (권한이 있으면)
-oc apply --dry-run=server -f deploy/ai/raw/<모델>.yaml
+oc apply --dry-run=server -f ai/raw/<모델>.yaml
 
 # 4. 카탈로그 갱신 (같은 커밋에 포함)
-uv run python scripts/model-catalog.py
+uv run scripts/model-catalog.py
 ```
 
 - 쓸 수 있는 런타임: `oc get servingruntime -n kbl-models -L kbl.io/runtime-tier`

@@ -3,7 +3,7 @@
 RHOAI 3.5 위에서 LLM 을 **두 가지 방식(KServe RawDeployment, llm-d + MaaS)으로 함께** 서빙하는 구조와,
 운영팀(Ops)·AI팀·에이전트 개발팀이 각자 무엇을 하고, 모델을 어떻게 호출하며, 무엇을 바꾸면 배포된 모델에 어떤 일이 일어나는지 설명한다.
 
-PoC(클러스터 rhoai-35, 브랜치 `test/rhoai-35-home`)에서 검증했다. 표기: **PoC 확인** = 실제 동작 확인, **추정** = 동작 원리상 예상(미검증), **3.5 미확인** = RHOAI 3.5 문서에 근거 없음.
+PoC(클러스터 rhoai-35, 리포 `rhoai-serving-gitops`, 브랜치 `main`)에서 검증했다. 표기: **PoC 확인** = 실제 동작 확인, **추정** = 동작 원리상 예상(미검증), **3.5 미확인** = RHOAI 3.5 문서에 근거 없음.
 
 > **PoC 클러스터 현재 상태**: GPU 가 1장이라 두 방식을 동시에 띄울 수 없어 **RawDeployment 로 서빙 중**이고, MaaS 쪽 앱
 > (`ops/gitops/apps/21-kbl-ai-maas.yaml`, `ops/kbl-maas/maas/qwen3-4b-instruct.yaml`)은 주석 처리해 두었다. KB Life 에서는 둘 다 켠다.
@@ -15,7 +15,7 @@ PoC(클러스터 rhoai-35, 브랜치 `test/rhoai-35-home`)에서 검증했다. �
 | 원칙 | 의미 | 왜 |
 |---|---|---|
 | **Git 이 유일한 변경 경로** | 사람은 Git 에 커밋하고, 클러스터 반영은 Argo CD 만 한다 | 변경 이력·리뷰·롤백이 Git 에 남는다. 손으로 바꾼 것은 Argo CD 가 되돌린다(selfHeal) |
-| **폴더 = 책임** | `deploy/ops/` 는 운영팀, `deploy/ai/` 는 AI팀 | 누가 무엇을 바꿀 수 있는지 폴더만 보면 안다 |
+| **폴더 = 책임** | `ops/` 는 운영팀, `ai/` 는 AI팀 | 누가 무엇을 바꿀 수 있는지 폴더만 보면 안다 |
 | **이중 가드** | Argo CD AppProject 가 AI팀 폴더의 허용 리소스를 제한 + 클러스터 RBAC 는 AI팀에 조회만 | AI팀이 네트워크·권한·런타임을 바꿀 수 없다 |
 | **두 서빙 경로, 용도로 구분** | **Raw**: 클러스터 안 에이전트 전용, SA 토큰 / **MaaS**: 클러스터 안팎, API 키 + 토큰 한도 | 내부 호출은 단순·저지연으로, 사용자·외부 호출은 사용량 통제와 함께 |
 | **이름·digest 고정** | 런타임 `vllm-<등급>-<버전>`, 이미지·모델은 `@sha256:` | 무엇이 떠 있는지 정확히 식별, 검사한 이미지 그대로 배포 |
@@ -27,10 +27,10 @@ PoC(클러스터 rhoai-35, 브랜치 `test/rhoai-35-home`)에서 검증했다. �
 
 ```mermaid
 flowchart LR
-  subgraph GIT["Git (model-lifecycle)"]
-    OPS["deploy/ops/<br/>운영팀"]
-    AIR["deploy/ai/raw/<br/>AI팀 · InferenceService"]
-    AIM["deploy/ai/maas/<br/>AI팀 · LLMInferenceService"]
+  subgraph GIT["Git (rhoai-serving-gitops)"]
+    OPS["ops/<br/>운영팀"]
+    AIR["ai/raw/<br/>AI팀 · InferenceService"]
+    AIM["ai/maas/<br/>AI팀 · LLMInferenceService"]
   end
   subgraph ARGO["Argo CD (openshift-gitops)"]
     POPS["AppProject kbl-ops<br/>클러스터 전체"]
@@ -54,7 +54,7 @@ flowchart LR
 ### 폴더
 
 ```
-deploy/
+rhoai-serving-gitops/
 ├── ai/                         AI팀
 │   ├── raw/                    KServe InferenceService (RawDeployment, 토큰 인증)  → ns kbl-models
 │   ├── maas/                   llm-d LLMInferenceService (MaaS 로 노출)          → ns kbl-maas
@@ -92,7 +92,7 @@ deploy/
 
 | | 운영팀 (Ops) | AI팀 | 에이전트 개발팀 |
 |---|---|---|---|
-| Git | `deploy/ops/` | `deploy/ai/raw/`, `deploy/ai/maas/` | (자기 앱 리포) |
+| Git | `ops/` | `ai/raw/`, `ai/maas/` | (자기 앱 리포) |
 | 하는 일 | 네임스페이스·격리, vLLM 런타임, 사용자·그룹, Raw 호출자 등록, MaaS 게시·인가·토큰 한도, GPU quota | 모델 배포·파라미터 조정 | 모델 호출 |
 | 클러스터 권한 | 모델 네임스페이스 admin, 격리 정책 조회 (변경은 Git) | 모델 네임스페이스 **조회만** | 자기 네임스페이스 |
 | RHOAI 대시보드 | 관리자 (Auth `adminGroups`) | 사용자 (Auth `allowedGroups`) | MaaS 사용자는 Gen AI studio(API 키) |
@@ -485,7 +485,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 | API 서버 egress | control-plane 노드 셀렉터 | 그대로 (master 3대 자동 포함) |
 | ingress VIP (에이전트 egress 예시) | `192.168.31.230` | KB Life ingress VIP |
 | MaaS 호스트 | `maas.apps.rhoai-35.edwin.home` | `maas.<KB Life apps 도메인>` |
-| Git | GitHub, 브랜치 `test/rhoai-35-home` | 사내 Git — `repoURL`·`targetRevision`·AppProject `sourceRepos` |
+| Git | GitHub, 리포 `rhoai-serving-gitops`, 브랜치 `main` | 사내 Git — `repoURL`·`targetRevision`·AppProject `sourceRepos` |
 
 ---
 

@@ -12,7 +12,7 @@ metadata:
 spec:
   description: Ops팀 - RHOAI 플랫폼 설정과 모델 네임스페이스
   sourceRepos:
-    - https://github.com/edwin-noh/model-lifecycle.git
+    - https://github.com/edwin-noh/rhoai-serving-gitops.git
   destinations:
     - server: https://kubernetes.default.svc
       namespace: "*"
@@ -70,7 +70,7 @@ metadata:
 spec:
   description: AI팀 - kbl-models 의 InferenceService, kbl-maas 의 LLMInferenceService
   sourceRepos:
-    - https://github.com/edwin-noh/model-lifecycle.git
+    - https://github.com/edwin-noh/rhoai-serving-gitops.git
   destinations:
     - server: https://kubernetes.default.svc
       namespace: kbl-models

@@ -1,6 +1,6 @@
 # 서빙 리소스의 라벨·annotation 출처와 용도
 
-`deploy/` 의 ServingRuntime / InferenceService / LLMInferenceService / LLMInferenceServiceConfig / MaaSModelRef / Namespace 에
+이 리포의 ServingRuntime / InferenceService / LLMInferenceService / LLMInferenceServiceConfig / MaaSModelRef / Namespace 에
 붙인 라벨과 annotation 이 **어디에 근거하고, 누가 읽고, 없으면 무엇이 달라지는지** 정리한다.
 기준: RHOAI Self-Managed 3.5 문서(PDF 38종 전체 검색), 클러스터 rhoai-35(3.5.2) 관찰 (2026-11-11).
 
@@ -105,7 +105,7 @@
 1. **upstream 런타임**(`vllm-upstream-0-28-0.yaml`): `kbl.io/support-status: unsupported` 대신(또는 함께) 공식
    `opendatahub.io/support-status: unsupported` + `opendatahub.io/unsupported-status-accepted: "true"` 를 쓴다.
    그래야 대시보드에서 제한 지원 런타임으로 표시되고, 수락 없이 쓰이지 않는다 (Configuring §1.4). GA 런타임은 둘 다 생략(=supported).
-2. `kbl.io/*` 는 컨트롤러가 읽지 않는다. 등급 보장은 Nexus push 권한과 PR 리뷰로 한다 (deploy/README.md).
+2. `kbl.io/*` 는 컨트롤러가 읽지 않는다. 등급 보장은 Nexus push 권한과 PR 리뷰로 한다 (README.md).
 3. **관찰** 등급 키(`hardware-profile-*`, `model-type`, `apiProtocol`, `runtime-version`, `template-*`, `gateway-access`)는
    문서가 보장하지 않는다. RHOAI 업그레이드 때 대시보드로 모델을 하나 만들어 붙는 키를 다시 비교한다:
    ```bash

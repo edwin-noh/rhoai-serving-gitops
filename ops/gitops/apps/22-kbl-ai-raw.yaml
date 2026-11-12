@@ -1,4 +1,4 @@
-# AI팀 KServe InferenceService(RawDeployment) 앱 — deploy/ai/raw
+# AI팀 KServe InferenceService(RawDeployment) 앱 — ai/raw
 # 현재 활성 서빙 방식 (GPU 1장이라 21-kbl-ai-maas.yaml 은 주석 처리). InferenceService 를 kbl-models 에 만들며 AppProject kbl-ai 로 범위가 제한된다
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -10,9 +10,9 @@ metadata:
 spec:
   project: kbl-ai
   source:
-    repoURL: https://github.com/edwin-noh/model-lifecycle.git
-    targetRevision: test/rhoai-35-home
-    path: deploy/ai/raw
+    repoURL: https://github.com/edwin-noh/rhoai-serving-gitops.git
+    targetRevision: main
+    path: ai/raw
   destination:
     server: https://kubernetes.default.svc
     namespace: kbl-models

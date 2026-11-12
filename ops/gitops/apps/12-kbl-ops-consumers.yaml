@@ -9,9 +9,9 @@ metadata:
 spec:
   project: kbl-ops
   source:
-    repoURL: https://github.com/edwin-noh/model-lifecycle.git
-    targetRevision: test/rhoai-35-home
-    path: deploy/ops/consumers
+    repoURL: https://github.com/edwin-noh/rhoai-serving-gitops.git
+    targetRevision: main
+    path: ops/consumers
   destination:
     server: https://kubernetes.default.svc
     # 리소스는 각자 namespace 를 명시한다. 이 값은 고아 리소스 검사 범위(비우면 클러스터 전체)를 좁히기 위한 것

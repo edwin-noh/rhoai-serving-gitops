@@ -38,7 +38,7 @@ Mixed 모드에서는 이렇게 같은 노드에 MIG 조각과 통 GPU 가 함�
 ## 모델에서 쓰는 법 (AI팀)
 
 ```yaml
-# LLMInferenceService (deploy/ai/maas/<모델>.yaml)
+# LLMInferenceService (ai/maas/<모델>.yaml)
 spec:
   template:
     containers:

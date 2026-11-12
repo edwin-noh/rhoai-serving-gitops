@@ -2,7 +2,8 @@
 
 `hf-modelcar` 로 만든 ModelCar 이미지를 RHOAI 3.5 에서 KServe Standard(RawDeployment) 모드로 서빙합니다.
 OpenShift GitOps(Argo CD)로 배포하고, Ops팀과 AI팀이 폴더를 나눠 관리합니다.
-나중에 리포를 나눌 때는 `ops/`, `ai/` 을 각각 리포로 옮기고 Argo CD 의 `repoURL`/`path` 만 바꿉니다.
+ModelCar 이미지 빌드·검증 도구는 [model-lifecycle](https://github.com/edwin-noh/model-lifecycle) 리포에 있습니다.
+나중에 Ops/AI 리포를 더 나눌 때는 `ops/`, `ai/` 을 각각 리포로 옮기고 Argo CD 의 `repoURL`/`path` 만 바꿉니다.
 
 | 폴더 | 담당 | 내용 | 문서 |
 |---|---|---|---|
@@ -58,7 +59,7 @@ client.chat.completions.create(model="qwen3-4b-instruct", messages=[...], tools=
 
 ## 다음 단계
 
-- **리포 분리**: `ops/`, `ai/` 을 각 리포로 옮기고 `ops/gitops/` 의 `sourceRepos`, `repoURL`, `path` 변경
+- **리포 추가 분리**: `ops/`, `ai/` 을 각 리포로 옮기고 `ops/gitops/` 의 `sourceRepos`, `repoURL`, `path` 변경
 - **Gateway / MaaS**: 앞단에서 모델 이름 기준으로 라우팅하면 뒤쪽 배치(네임스페이스, 등급)가 바뀌어도
   호출하는 에이전트는 영향을 받지 않습니다. 인증도 이 앞단에서 처리합니다
 - **이미지 서명**: Nexus `vllm-ga` / `models-validated` 이미지에 cosign 서명 + `ClusterImagePolicy`

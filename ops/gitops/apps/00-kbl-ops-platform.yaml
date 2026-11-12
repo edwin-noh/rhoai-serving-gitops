@@ -13,9 +13,9 @@ metadata:
 spec:
   project: kbl-ops
   source:
-    repoURL: https://github.com/edwin-noh/model-lifecycle.git
-    targetRevision: test/rhoai-35-home
-    path: deploy/ops/platform
+    repoURL: https://github.com/edwin-noh/rhoai-serving-gitops.git
+    targetRevision: main
+    path: ops/platform
     directory:
       exclude: 'hardwareprofile-*.yaml'
   destination:

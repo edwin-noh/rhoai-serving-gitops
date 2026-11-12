@@ -1,6 +1,6 @@
 # 모델 카탈로그
 
-> 자동 생성 파일입니다. 직접 고치지 말고 `uv run python scripts/model-catalog.py` 로 다시 만드세요.
+> 자동 생성 파일입니다. 직접 고치지 말고 `uv run scripts/model-catalog.py` 로 다시 만드세요.
 
 에이전트에서는 엔드포인트를 OpenAI 호환 `base_url` 로, 모델 이름을 `model` 로 씁니다.
 호출하려면 에이전트 네임스페이스에 `kbl.io/model-consumer=true` 라벨이 필요합니다 (Ops팀에 요청).
