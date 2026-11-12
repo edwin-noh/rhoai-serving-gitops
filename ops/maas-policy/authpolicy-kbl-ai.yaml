@@ -6,7 +6,7 @@ metadata:
   namespace: models-as-a-service
 spec:
   modelRefs:
-    - name: kanana-1-5-2b-instruct
+    - name: qwen3-1-7b
       namespace: kbl-maas
   subjects:
     groups:

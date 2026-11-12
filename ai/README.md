@@ -1,6 +1,6 @@
 # AI팀: InferenceService
 
-> 현재는 소형 한국어 모델 `kanana-1-5-2b-instruct` 를 `raw/`(KServe InferenceService)와 `maas/`(LLMInferenceService, MaaS 게시)로
+> 현재는 소형 모델 `qwen3-1-7b`(Qwen3-1.7B) 를 `raw/`(KServe InferenceService)와 `maas/`(LLMInferenceService, MaaS 게시)로
 > **동시에** 띄워 두 방식을 비교합니다. GPU 1장(12GB)을 time-slicing 으로 2개로 나눠 쓰고, 파드마다 `--gpu-memory-utilization=0.45` 로 메모리를 나눕니다.
 > Qwen3-4B 는 raw 쪽은 `serving.kserve.io/stop` 으로 정지, maas 쪽은 전체 주석(보관본)입니다.
 

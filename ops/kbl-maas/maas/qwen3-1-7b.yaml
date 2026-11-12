@@ -2,7 +2,7 @@
 apiVersion: maas.opendatahub.io/v1alpha1
 kind: MaaSModelRef
 metadata:
-  name: kanana-1-5-2b-instruct
+  name: qwen3-1-7b
   namespace: kbl-maas
   annotations:
     # LLMInferenceService(AI팀 앱 21-kbl-ai-maas)가 먼저 있어야 한다
@@ -10,4 +10,4 @@ metadata:
 spec:
   modelRef:
     kind: LLMInferenceService
-    name: kanana-1-5-2b-instruct
+    name: qwen3-1-7b

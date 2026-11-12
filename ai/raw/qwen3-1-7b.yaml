@@ -1,17 +1,17 @@
-# kakaocorp/kanana-1.5-2.1b-instruct-2505 (커뮤니티 모델, Apache 2.0, Llama 구조) — KServe InferenceService(RawDeployment)
+# Qwen/Qwen3-1.7B (Apache 2.0) — KServe InferenceService(RawDeployment)
 # 같은 모델을 ai/maas 의 LLMInferenceService(MaaS)로도 띄워 두 방식을 동시에 테스트한다
 # - GPU 1장을 time-slicing 으로 2개로 나눠 쓴다 (openshift-cluster-gitops gpu-operator overlay 의 time-sliced-2)
-# - 이름의 "1-5-2b": ISVC 이름은 DNS 라벨이라 점을 쓸 수 없다
+# - kanana-1.5-2.1b 는 GA 런타임(vLLM 0.24, transformers 설정 검증)에서 hidden_size/heads 검증 오류로 기동하지 않아 교체했다
 # AI팀이 관리한다. 허용되는 필드와 규칙은 ai/README.md
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
-  name: kanana-1-5-2b-instruct
+  name: qwen3-1-7b
   namespace: kbl-models
   annotations:
-    openshift.io/display-name: Kanana-1.5-2.1B-Instruct-2505
+    openshift.io/display-name: Qwen3-1.7B
     # 모델 카탈로그(CATALOG.md)에 표시된다
-    openshift.io/description: "한국어 소형 지시 모델 (text-to-text). MaaS/RawDeployment 동시 테스트용"
+    openshift.io/description: "소형 범용 모델 (text-to-text, 한국어 가능). MaaS/RawDeployment 동시 테스트용"
     serving.kserve.io/deploymentMode: Standard
     # 테스트 클러스터의 기존 프로파일. toleration/nodeSelector 를 webhook 이 넣어 준다
     opendatahub.io/hardware-profile-name: nvidia-gpu-serving
@@ -40,16 +40,18 @@ spec:
       modelFormat:
         name: vLLM
       runtime: vllm-ga-3-5-2
-      storageUri: oci://quay.io/gunoh/modelcar-kanana-1.5-2.1b-instruct-2505@sha256:d744ad4d0346e83703726f3f81e21c39ee15b895b8f164acc958b83d76489954
+      storageUri: oci://quay.io/gunoh/modelcar-qwen3-1.7b@sha256:eb3010d967587f023944a55dacfa5b549d16fc66bda5c6ea195e7fad39d09dce
       args:
         # GPU time-slicing(2개)으로 MaaS 쪽 같은 모델과 GPU 1장(12GiB)을 나눠 쓴다. 두 파드 합이 0.9 를 넘지 않게 한다
-        # 12GiB x 0.45 = 5.4GiB = 가중치 4.32GiB(BF16) + KV 캐시(토큰당 128KiB, 4096 토큰 0.5GiB) + 활성 메모리
+        # 12GiB x 0.45 = 5.4GiB = 가중치 약 3.8GiB(BF16) + KV 캐시(토큰당 112KiB, 4096 토큰 0.44GiB) + 활성 메모리
         - --gpu-memory-utilization=0.45
         - --max-model-len=4096
         - --max-num-seqs=16
         # CUDA graph 메모리를 아낀다 (속도보다 두 개를 같이 띄우는 것이 목적)
         - --enforce-eager
-        # text-to-text 테스트용이라 tool calling 플래그는 넣지 않는다 (Kanana 용 파서 미검증)
+        # Qwen3 는 thinking 모델이다. <think> 내용을 응답의 reasoning_content 로 분리한다
+        # (생각 없이 답만 받으려면 요청에 chat_template_kwargs: {"enable_thinking": false})
+        - --reasoning-parser=qwen3
       env:
         # 런타임/라이브러리의 외부 호출(모델 다운로드, 사용 통계)을 끈다
         - name: HF_HUB_OFFLINE
