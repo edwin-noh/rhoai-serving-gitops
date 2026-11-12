@@ -1,24 +1,23 @@
-# [비활성] AI팀 LLMInferenceService (MaaS 대상) 앱 — ai/maas
-# KServe InferenceService(22-kbl-ai-raw.yaml)로 되돌리면서 동기화를 멈췄다 (GPU 1장). 파일 전체가 주석이라 app-of-apps(kbl-root)가 무시한다.
-# 다시 쓰려면 아래 주석을 해제하고 ops/kbl-maas/maas/ 의 MaaSModelRef 주석도 해제한다. 22 는 주석 처리한다
-# # AI팀 LLMInferenceService (MaaS 대상). AppProject kbl-ai 라 LLMInferenceService/InferenceService 외 리소스는 거부된다
-# apiVersion: argoproj.io/v1alpha1
-# kind: Application
-# metadata:
-#   name: kbl-ai-maas
-#   namespace: openshift-gitops
-#   annotations:
-#     argocd.argoproj.io/sync-wave: "2"
-# spec:
-#   project: kbl-ai
-#   source:
-#     repoURL: https://github.com/edwin-noh/rhoai-serving-gitops.git
-#     targetRevision: main
-#     path: ai/maas
-#   destination:
-#     server: https://kubernetes.default.svc
-#     namespace: kbl-maas
-#   syncPolicy:
-#     automated:
-#       selfHeal: true
-#       prune: true     # 파일을 지우면 모델도 내린다
+# AI팀 LLMInferenceService (MaaS 대상) 앱 — ai/maas
+# 활성: kanana-1-5-2b-instruct 를 MaaS(이 앱)와 RawDeployment(22-kbl-ai-raw.yaml)로 동시에 테스트한다 (GPU time-slicing 2개).
+# AppProject kbl-ai 라 LLMInferenceService/InferenceService 외 리소스는 거부된다
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kbl-ai-maas
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: kbl-ai
+  source:
+    repoURL: https://github.com/edwin-noh/rhoai-serving-gitops.git
+    targetRevision: main
+    path: ai/maas
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kbl-maas
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true     # 파일을 지우면 모델도 내린다

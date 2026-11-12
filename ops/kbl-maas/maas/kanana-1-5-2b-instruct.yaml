@@ -1,0 +1,13 @@
+# MaaS 게시 (Ops팀 결정). 사용 권한·한도는 ops/maas-policy/ 에서 같은 커밋으로 관리한다
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSModelRef
+metadata:
+  name: kanana-1-5-2b-instruct
+  namespace: kbl-maas
+  annotations:
+    # LLMInferenceService(AI팀 앱 21-kbl-ai-maas)가 먼저 있어야 한다
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  modelRef:
+    kind: LLMInferenceService
+    name: kanana-1-5-2b-instruct

@@ -1,5 +1,5 @@
 # AI팀 KServe InferenceService(RawDeployment) 앱 — ai/raw
-# 현재 활성 서빙 방식 (GPU 1장이라 21-kbl-ai-maas.yaml 은 주석 처리). InferenceService 를 kbl-models 에 만들며 AppProject kbl-ai 로 범위가 제한된다
+# 21-kbl-ai-maas.yaml 과 함께 활성 (GPU time-slicing 2개로 같은 모델을 MaaS/Raw 동시 테스트). InferenceService 를 kbl-models 에 만들며 AppProject kbl-ai 로 범위가 제한된다
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

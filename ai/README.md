@@ -1,7 +1,8 @@
 # AI팀: InferenceService
 
-> 현재 생성형 모델은 `raw/`(KServe InferenceService)로 배포합니다. `maas/` 의 LLMInferenceService(아래 절)는 보관본이며
-> Argo CD 앱(`ops/gitops/apps/21-kbl-ai-maas.yaml`)과 MaaSModelRef(`ops/kbl-maas/maas/`)가 주석 처리되어 동기화되지 않습니다 (GPU 1장).
+> 현재는 소형 한국어 모델 `kanana-1-5-2b-instruct` 를 `raw/`(KServe InferenceService)와 `maas/`(LLMInferenceService, MaaS 게시)로
+> **동시에** 띄워 두 방식을 비교합니다. GPU 1장(12GB)을 time-slicing 으로 2개로 나눠 쓰고, 파드마다 `--gpu-memory-utilization=0.45` 로 메모리를 나눕니다.
+> Qwen3-4B 는 raw 쪽은 `serving.kserve.io/stop` 으로 정지, maas 쪽은 전체 주석(보관본)입니다.
 
 `raw/` 의 파일 하나가 모델 하나(InferenceService)입니다. 앱을 켜면 Argo CD(`kbl-ai-raw`)가 동기화하고,
 파일을 지우면 모델도 내려갑니다. 이 폴더에는 **InferenceService 만** 둘 수 있습니다 (다른 리소스는 Argo CD 가 거부).

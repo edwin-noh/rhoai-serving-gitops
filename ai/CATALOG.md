@@ -8,4 +8,5 @@
 
 | 모델 (model) | 설명 | 엔드포인트 (OpenAI 호환) | 최대 컨텍스트 | tool calling | 런타임 등급 | 출처 | 런타임 | GPU |
 |---|---|---|---|---|---|---|---|---|
+| `kanana-1-5-2b-instruct` | 한국어 소형 지시 모델 (text-to-text). MaaS/RawDeployment 동시 테스트용 | `https://kanana-1-5-2b-instruct-predictor.kbl-models.svc:8443/v1` (토큰) | 4096 | - | ga | community | `vllm-ga-3-5-2` | 1 |
 | `qwen3-4b-instruct` | 범용 소형 지시 모델. 에이전트 tool calling, RAG 응답 생성 | `https://qwen3-4b-instruct-predictor.kbl-models.svc:8443/v1` (토큰) | 12288 | hermes | ga | validated | `vllm-ga-3-5-2` | 1 |

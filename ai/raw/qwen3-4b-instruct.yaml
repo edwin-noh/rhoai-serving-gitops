@@ -1,5 +1,5 @@
 # Qwen/Qwen3-4B-Instruct-2507 (검증 모델, GA 런타임) — KServe InferenceService(RawDeployment) 방식 보관본
-# 현재 활성: Argo CD 앱 gitops/apps/22-kbl-ai-raw.yaml 이 동기화한다 (GPU 1장이라 ai/maas 의 LLMInferenceService 앱은 주석 처리)
+# [정지] serving.kserve.io/stop 으로 파드를 내렸다 (GPU 를 kanana MaaS/Raw 동시 테스트에 쓴다). 다시 쓰려면 annotation 을 지운다
 # AI팀이 관리한다. 허용되는 필드와 규칙은 ai/README.md
 # - 이미지는 hf-modelcar 로 만들어 Nexus models-<출처> repo 에 push 한다. --push 후 출력되는 digest 를
 #   storageUri 에 쓰면 반입 심사한 내용과 정확히 일치시킬 수 있다 (태그는 바뀔 수 있음)
@@ -11,6 +11,8 @@ metadata:
   name: qwen3-4b-instruct
   namespace: kbl-models
   annotations:
+    # GPU(time-slicing 2개)를 kanana-1-5-2b-instruct 의 raw/maas 가 쓰므로 정지. ISVC 는 남기고 파드만 내린다
+    serving.kserve.io/stop: "true"
     openshift.io/display-name: Qwen3-4B-Instruct-2507
     # 모델 카탈로그(CATALOG.md)에 표시된다
     openshift.io/description: "범용 소형 지시 모델. 에이전트 tool calling, RAG 응답 생성"

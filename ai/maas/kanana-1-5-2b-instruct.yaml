@@ -1,0 +1,57 @@
+# kakaocorp/kanana-1.5-2.1b-instruct-2505 (커뮤니티 모델, Apache 2.0) — llm-d(LLMInferenceService)로 서빙하고 MaaS 로 노출한다.
+# 같은 모델을 ai/raw 의 InferenceService 로도 띄워 두 방식을 동시에 테스트한다 (GPU time-slicing 2개, 파드당 GPU 메모리 0.45, 계산은 ai/raw 같은 파일)
+# AI팀이 관리한다. 바꿀 수 있는 것: model.uri(digest), replicas, resources, VLLM_ADDITIONAL_ARGS
+# 바꾸지 않는 것: baseRefs(Ops 런타임), router.gateway(MaaS gateway), image, auth annotation
+# - MaaS 게시(MaaSModelRef)와 사용 권한·한도(MaaSAuthPolicy/MaaSSubscription)는 Ops팀이 관리한다
+apiVersion: serving.kserve.io/v1alpha2
+kind: LLMInferenceService
+metadata:
+  name: kanana-1-5-2b-instruct
+  namespace: kbl-maas
+  annotations:
+    openshift.io/display-name: Kanana-1.5-2.1B-Instruct-2505
+    openshift.io/description: "한국어 소형 지시 모델 (text-to-text). MaaS/RawDeployment 동시 테스트용"
+  labels:
+    kbl.io/runtime-tier: ga
+    kbl.io/model-source: community
+    opendatahub.io/dashboard: "true"
+    opendatahub.io/genai-asset: "true"
+spec:
+  # Ops팀 런타임 (ops/kbl-maas/runtimes/vllm-ga-3-5-2.yaml). vLLM 이미지는 여기서 정해진다
+  baseRefs:
+    - name: vllm-ga-3-5-2
+  model:
+    uri: oci://quay.io/gunoh/modelcar-kanana-1.5-2.1b-instruct-2505@sha256:d744ad4d0346e83703726f3f81e21c39ee15b895b8f164acc958b83d76489954
+    # OpenAI API 의 model 이름
+    name: kanana-1-5-2b-instruct
+  replicas: 1
+  router:
+    route: {}
+    # MaaS gateway 에 붙인다 (MaaS 인증·토큰 한도가 이 gateway 에서 적용된다)
+    gateway:
+      refs:
+        - name: maas-default-gateway
+          namespace: openshift-ingress
+    scheduler: {}
+  template:
+    containers:
+      - name: main
+        env:
+          # 기본 인자에 병합된다 (같은 인자는 이 값이 우선). 메모리 계산은 ai/raw/kanana-1-5-2b-instruct.yaml
+          - name: VLLM_ADDITIONAL_ARGS
+            value: --gpu-memory-utilization=0.45 --max-model-len=4096 --max-num-seqs=16 --enforce-eager
+          - name: HF_HUB_OFFLINE
+            value: "1"
+          - name: VLLM_NO_USAGE_STATS
+            value: "1"
+          - name: DO_NOT_TRACK
+            value: "1"
+        resources:
+          limits:
+            cpu: "4"
+            memory: 8Gi
+            nvidia.com/gpu: "1"
+          requests:
+            cpu: "2"
+            memory: 8Gi
+            nvidia.com/gpu: "1"
