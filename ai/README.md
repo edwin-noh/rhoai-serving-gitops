@@ -112,3 +112,13 @@ oc get pods -n kbl-maas
 oc logs -n kbl-maas deploy/<모델>-kserve -c main | grep 'vllm version'   # vLLM 버전
 ```
 호출은 MaaS API 키로 합니다: `https://maas.<apps 도메인>/v1/chat/completions` (body 의 `model` = `model.name`).
+
+## Gen AI playground (`kbl-models`, AI팀 admin 만)
+
+- 만들고 쓰는 것은 그룹 `kbl-ai-admins` 만 (`ops/kbl-models/42-rbac-ai-admin.yaml`). 일반 AI팀은 조회만
+- playground 는 같은 네임스페이스에서만 모델을 부른다. 다른 네임스페이스·클러스터 밖에서는 이 모델에 닿을 수 없다
+- 모델 엔드포인트 등록: Gen AI studio → AI asset endpoints → **Create endpoint**
+  - URL: `https://<모델>-predictor.kbl-models.svc.cluster.local:8443/v1`
+  - 토큰: `oc get secret playground-caller-token -n kbl-models -o jsonpath='{.data.token}' | base64 -d`
+- 대시보드의 "Add as AI asset endpoint" 는 ISVC 에 Git 에 없는 라벨(`opendatahub.io/genai-asset`)을 붙이고 모델 파드를 재기동시킨다.
+  계속 쓰려면 그 라벨을 `raw/<모델>.yaml` 에 넣는다

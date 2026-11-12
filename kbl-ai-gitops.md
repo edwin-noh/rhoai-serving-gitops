@@ -62,7 +62,7 @@ deploy/
 ├── ops/                        운영팀
 │   ├── gitops/                 Argo CD AppProject · app-of-apps (apps/)
 │   ├── platform/               클러스터 범위: Group(사용자), RBAC, HardwareProfile
-│   ├── kbl-models/             Raw 네임스페이스: 격리(ANP·EgressFirewall·NetworkPolicy), RBAC, ServingRuntime, 호출 Role
+│   ├── kbl-models/             Raw 네임스페이스: NetworkPolicy 3개, RBAC(AI 조회·AI admin playground), ServingRuntime, 호출 Role
 │   ├── consumers/              Raw 호출자(에이전트 네임스페이스) 등록 — 호출자 하나 = 파일 하나
 │   ├── kbl-maas/               MaaS 네임스페이스: 격리, RBAC, vLLM 런타임(LLMInferenceServiceConfig), MaaS 게시(MaaSModelRef)
 │   ├── maas-policy/            MaaS 인가(MaaSAuthPolicy)·토큰 한도(MaaSSubscription)
@@ -222,55 +222,60 @@ oc logs -n kbl-maas deploy/<모델>-kserve -c main | grep 'vllm version'
 
 ### 6.1 모델 네임스페이스에서 열려 있는 것 / 막혀 있는 것
 
+모델 네임스페이스마다 **NetworkPolicy 3개**로 관리한다 (Ops 가 Git 으로만 만든다. AI팀 Role 에는 NetworkPolicy 권한이 없고, 그 밖에는 RHOAI operator 만 만든다).
+
+| 파일 | 대상 | 역할 |
+|---|---|---|
+| `34-netpol-default-deny.yaml` | 네임스페이스의 모든 파드 | 들어오고 나가는 것 기본 차단 (클러스터 밖 포함) |
+| `35-netpol-egress.yaml` | 모든 파드 | DNS, 같은 네임스페이스, API 서버(머신 네트워크 CIDR:6443) |
+| `36-netpol-*-ingress.yaml` | 모델 파드 | 호출 허용 (아래 표) |
+| `network/allow-*.yaml` (Raw) | 지정 모델 | 다른 네임스페이스 대상 egress (파일 하나 = 대상 하나) |
+
 #### `kbl-models` (Raw)
 
-모델 파드(라벨 `serving.kserve.io/inferenceservice` 가 있는 파드)에 적용. 4개 계층이 겹친다.
+**들어오는 트래픽 (모델 파드)**
 
-| 계층 | 파일 | 누가 바꿀 수 있나 |
+| 출발 | 8443 (토큰 인증 프록시) | 8080 (vLLM 직결) |
 |---|---|---|
-| AdminNetworkPolicy (클러스터 범위, NetworkPolicy 보다 먼저 평가) | `ops/kbl-models/20-adminnetworkpolicy.yaml` | cluster-admin(=Git) 만 |
-| EgressFirewall (네임스페이스 전체, 클러스터 밖) | `ops/kbl-models/21-egressfirewall.yaml` | cluster-admin(=Git) 만 |
-| NetworkPolicy | `ops/kbl-models/31·32·33-*.yaml`, `network/allow-*.yaml` | Git |
-| 파드 SA | `ops/kbl-models/30-serviceaccount.yaml` (토큰은 인증 프록시용) | Git |
+| 같은 네임스페이스 (Gen AI playground 등) | ✅ 토큰 필요 (playground 는 `playground-caller` 토큰) | ❌ |
+| Ops 가 허용한 네임스페이스 (`kbl.io/model-consumer=true`) | ✅ 토큰 필요 (`ops/consumers/<ns>.yaml`) | ❌ |
+| `openshift-user-workload-monitoring` | — | ✅ 메트릭 |
+| 그 외 네임스페이스, 클러스터 밖 | ❌ | ❌ |
 
-**들어오는 트래픽 (ingress)**
+토큰 없이 vLLM 에 닿는 경로는 없다 (PoC 확인: 등록 ns·같은 ns 모두 토큰 200 / 무토큰 401 / 8080 차단, 라벨 없는 ns 는 연결 자체 차단).
+kubelet 프로브와 `oc port-forward` 는 NetworkPolicy 영향을 받지 않는다 (Ops 점검은 port-forward).
 
-| 출발 | 포트 | 결과 | 비고 |
-|---|---|---|---|
-| 라벨 `kbl.io/model-consumer=true` 네임스페이스 | **8443** (kube-rbac-proxy, https) | ✅ | 토큰 검증 후 vLLM 으로 |
-| 같은 라벨 네임스페이스 | 8080 (vLLM 직결, `<모델>-metrics` Service) | ❌ | 열면 토큰 없이 우회 호출됨 (PoC 확인 후 차단) |
-| `openshift-user-workload-monitoring` | 8080 | ✅ | 메트릭 수집 |
-| 같은 네임스페이스의 모델이 아닌 파드 (Ops 점검용) | 8080, 8443 | ✅ | |
-| 그 외 모든 네임스페이스, 클러스터 밖 | 전부 | ❌ | Route 없음 (외부 노출 금지 규칙) |
-| kubelet 프로브, `oc port-forward` | — | 영향 없음 | |
+**나가는 트래픽 (네임스페이스의 모든 파드)**
 
-**나가는 트래픽 (egress)**
-
-| 목적지 | 포트 | 결과 | 비고 |
-|---|---|---|---|
-| DNS (`openshift-dns`) | 5353 | ✅ | ANP Allow |
-| API 서버 (control-plane 노드) | 6443 | ✅ | 토큰 인증 프록시의 TokenReview/SubjectAccessReview. 노드 셀렉터라 master 3대도 자동 포함 |
-| 허용 목록 대상 (예: `rag-system` vector-db) | 6333 | 목록에 있는 모델만 ✅ | ANP Pass + `network/allow-*.yaml` |
-| 다른 네임스페이스, **같은 네임스페이스의 다른 모델** | 전부 | ❌ | ANP Deny (NetworkPolicy 로도 못 엶) |
-| 클러스터 밖 (인터넷, 사내망) | 전부 | ❌ | EgressFirewall Deny |
-| 같은 노드의 다른 포트 (예: 22) | — | ❌ | PoC 확인 |
+| 목적지 | 결과 | 비고 |
+|---|---|---|
+| DNS (`openshift-dns` 5353) | ✅ | |
+| 같은 네임스페이스 | ✅ | playground → 모델·pgvector. 받는 쪽 ingress 정책이 다시 거른다 (모델은 8443+토큰, pgvector 는 playground 만 — operator NP) |
+| API 서버 (머신 네트워크 CIDR, 6443 만) | ✅ | 토큰 인증 프록시의 TokenReview/SubjectAccessReview. master 수·교체와 무관 |
+| 허용 목록 대상 (예: `rag-system` vector-db 6333) | 목록에 있는 모델만 ✅ | `network/allow-*.yaml` |
+| 다른 네임스페이스, 클러스터 밖, 노드의 다른 포트 | ❌ | PoC 확인: quay.io·노드 22 차단 |
 
 모델 이미지(ModelCar)·vLLM 이미지는 **노드(kubelet)** 가 받으므로 파드 egress 가 필요 없다.
 
+**Gen AI playground (예외 허용)**: `kbl-models` 안에서만 모델을 부른다. 만들고 쓰는 것은 **AI팀 admin(그룹 `kbl-ai-admins`)** 만
+(`ops/kbl-models/42-rbac-ai-admin.yaml` — OGXServer·ConfigMap·Secret 권한, NetworkPolicy·Deployment 권한 없음). playground 가 만든
+NetworkPolicy(operator 소유)는 playground 파드만 대상으로 한다. 모델 엔드포인트 등록: Gen AI studio → AI asset endpoints → Create endpoint 에
+`https://<모델>-predictor.kbl-models.svc.cluster.local:8443/v1` + Secret `playground-caller-token` 의 token.
+
 #### `kbl-maas` (MaaS)
 
-| 방향 | 출발/목적지 | 결과 | 파일 |
-|---|---|---|---|
-| ingress | `openshift-ingress` (MaaS gateway 파드) | ✅ | `ops/kbl-maas/30-networkpolicy.yaml` |
-| ingress | 같은 네임스페이스 (EPP scheduler → vLLM) | ✅ | |
-| ingress | `openshift-user-workload-monitoring` | ✅ | |
-| ingress | 그 외 (에이전트 네임스페이스 포함) | ❌ | **MaaS 모델은 반드시 gateway 를 거쳐 호출** (인증·한도 우회 불가) |
-| egress | vLLM 파드 → DNS | ✅ | |
-| egress | vLLM 파드 → 그 외 | ❌ | |
-| egress | EPP scheduler → API 서버 등 | 제한 없음 | EPP 는 API 서버를 조회해야 함 |
-| — | ANP / EgressFirewall | 아직 없음 | llm-d 트래픽 경로 확인 후 추가 검토 (1차 구성) |
+| 방향 | 출발/목적지 | 결과 |
+|---|---|---|
+| ingress | `openshift-ingress` (MaaS gateway), 같은 네임스페이스 (EPP → vLLM), 모니터링 | ✅ |
+| ingress | 그 외 (에이전트 네임스페이스 포함) | ❌ **MaaS 모델은 gateway(인증·토큰 한도)를 거쳐야만 호출** (PoC 확인) |
+| egress | DNS, 같은 네임스페이스, API 서버 6443 (EPP) | ✅ |
+| egress | 그 외 (클러스터 밖 포함) | ❌ |
 
 네임스페이스 라벨 `maas.opendatahub.io/gateway-access=true` 가 있어야 MaaS gateway 가 이 네임스페이스의 HTTPRoute 를 받는다 (`ops/kbl-maas/00-namespace.yaml`).
+
+**감수하는 점**: NetworkPolicy 는 합산이라 operator 가 모델 파드를 대상으로 허용 NP 를 만들면 열린다 (지금 확인된 operator NP 는 playground 파드 대상).
+Git 에 없는 NP 점검:
+`oc get netpol -n kbl-models -o custom-columns='NAME:.metadata.name,ARGO:.metadata.annotations.argocd\.argoproj\.io/tracking-id,OWNER:.metadata.ownerReferences[0].kind,TARGET:.spec.podSelector'`
 
 ### 6.2 클러스터 안의 에이전트 앱이 호출할 때
 
@@ -407,7 +412,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 | `MaaSAuthPolicy` 그룹 변경 | 재기동 없음. Authorino 캐시(60초) 후 반영 |
 | `MaaSModelRef` 삭제 | MaaS 에서 모델 비공개 (파드는 계속 실행) |
 | `ops/consumers/<ns>.yaml` 삭제 + RoleBinding 삭제 | 그 에이전트의 Raw 호출 즉시 403 (프록시가 매 요청 권한 확인) |
-| NetworkPolicy/ANP/EgressFirewall | 재기동 없음, 즉시 반영 |
+| NetworkPolicy | 재기동 없음, 즉시 반영 |
 | MIG 구성 | 노드 GPU 재분할 → 해당 노드 모델 중단 (`ops/mig/README.md` 절차) |
 
 ---
@@ -418,7 +423,8 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 - Raw: 토큰 인증 필수, 클러스터 안에서만, 등록된 호출자만. 호출 권한은 `kbl-models` 의 모든 Raw 모델 단위
 - MaaS: API 키 필수, 사용자별 토큰 한도(입력+출력), 키는 발급 시점 그룹 기억 → 그룹에서 빼면 키 revoke (Govern LLM access with MaaS §1.16.3), Subscription 삭제 시 그 키 모두 무효
 - MaaS 모델 파드는 gateway 외 경로로 호출할 수 없다
-- 모델 파드는 외부·다른 네임스페이스·다른 모델로 나갈 수 없다 (Raw: API 서버 6443 만 예외). 모델이 다른 서비스를 불러야 하면 운영팀에 요청
+- 모델 네임스페이스에서는 외부·다른 네임스페이스로 나갈 수 없다 (DNS·같은 ns·API 서버 6443 만). 다른 서비스를 불러야 하면 운영팀에 요청
+- playground 는 같은 네임스페이스에서만, AI팀 admin(`kbl-ai-admins`)만 쓴다. playground 도 모델은 토큰으로 호출한다
 
 **배포**
 - 이미지·모델은 digest(`@sha256:`)로만
@@ -442,7 +448,8 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 | 모델 MaaS 공개 | AI → Ops | `ops/kbl-maas/maas/<모델>.yaml` + `ops/maas-policy/` (한 커밋) |
 | 토큰 한도 변경 / 사용 그룹 추가 | 사용자·AI → Ops | `ops/maas-policy/subscription-*.yaml`, `authpolicy-*.yaml` |
 | 사용자 추가 | → Ops | `ops/platform/groups.yaml` (KB Life: AD 그룹) |
-| 모델이 다른 ns 서비스 호출 | AI → Ops | `ops/kbl-models/network/allow-*.yaml` + ANP `pass-*` 규칙 |
+| 모델이 다른 ns 서비스 호출 | AI → Ops | `ops/kbl-models/network/allow-*.yaml` (파일 하나) |
+| playground 사용자 추가 | AI → Ops | `ops/platform/groups.yaml` 의 `kbl-ai-admins` |
 | GPU quota | AI → Ops | `ops/kbl-models/10-resourcequota.yaml`, `ops/kbl-maas/10-resourcequota.yaml` |
 | MIG 구성 변경 | → Ops (유지보수) | `ops/mig/README.md` |
 

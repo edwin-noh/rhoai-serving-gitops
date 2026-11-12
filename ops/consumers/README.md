@@ -5,7 +5,7 @@
 
 | 항목 | 리소스 | 효과 |
 |---|---|---|
-| 네트워크 | Namespace 라벨 `kbl.io/model-consumer: "true"` | `kbl-models` 의 8443(kube-rbac-proxy)로 접속 가능 (`../kbl-models/33-networkpolicy-ingress.yaml`) |
+| 네트워크 | Namespace 라벨 `kbl.io/model-consumer: "true"` | `kbl-models` 의 8443(kube-rbac-proxy)로 접속 가능 (`../kbl-models/36-netpol-model-ingress.yaml`) |
 | 신원 | ServiceAccount (에이전트 ns) | 에이전트 파드가 이 SA 로 실행, 토큰을 Bearer 로 전송 |
 | 권한 | RoleBinding (ns `kbl-models`) → Role `model-caller` | `kbl-models` 의 **모든** ISVC 호출 가능 (`../kbl-models/50-model-callers.yaml`) |
 

@@ -17,12 +17,14 @@ platform/                          클러스터 설정 (Argo CD: kbl-ops-platfor
 kbl-models/                        모델 네임스페이스 (Argo CD: kbl-ops-kbl-models)
   00-namespace.yaml
   10-resourcequota.yaml            네임스페이스 GPU quota
-  20-adminnetworkpolicy.yaml
-  21-egressfirewall.yaml
-  30-serviceaccount.yaml           model-serving (토큰 미마운트, nexus-pull)
-  31-, 32-networkpolicy-*.yaml     egress 기본 차단, DNS 허용
-  33-networkpolicy-ingress.yaml    ingress 허용: 소비 네임스페이스(kbl.io/model-consumer=true), 메트릭 수집
-  40-rbac-ai.yaml                  AI팀 Role/RoleBinding
+  30-serviceaccount.yaml           model-serving (모델 파드 SA, 토큰은 인증 프록시용)
+  34-netpol-default-deny.yaml      모든 파드 in/out 기본 차단 (클러스터 밖 포함)
+  35-netpol-egress.yaml            DNS, 같은 ns, API 서버(머신 네트워크 CIDR:6443)
+  36-netpol-model-ingress.yaml     모델 8443 ← 같은 ns + kbl.io/model-consumer=true ns / 8080 ← 모니터링만
+  40-rbac-ai.yaml                  AI팀 조회 Role
+  41-rbac-ops.yaml                 Ops 네임스페이스 admin
+  42-rbac-ai-admin.yaml            AI팀 admin(kbl-ai-admins) playground Role
+  50-model-callers.yaml            Role model-caller, playground-caller SA·토큰
   network/allow-<ns>-<대상>.yaml   허용 대상별 NetworkPolicy, 접근 가능한 모델 목록 (AI팀 요청)
   runtimes/vllm-<등급>-<버전>.yaml
 gitops/
@@ -116,8 +118,8 @@ skopeo copy --all docker://registry.redhat.io/rhaiis/vllm-cuda-rhel9@sha256:<dig
 
 ### 다른 네임스페이스 접근 (AI팀 요청)
 
-- 이미 있는 대상: `network/allow-<ns>-<대상>.yaml` 의 `values` 에 모델 이름 추가 (ANP 는 그대로)
-- 새 대상: `network/allow-<ns>-<대상>.yaml` 추가와 `20-adminnetworkpolicy.yaml` 의 `pass-<ns>-<대상>` 규칙 추가를 같은 커밋으로 합니다
+- 이미 있는 대상: `network/allow-<ns>-<대상>.yaml` 의 `values` 에 모델 이름 추가
+- 새 대상: `network/allow-<ns>-<대상>.yaml` 파일 하나 추가 (34 default-deny 위에 egress 허용을 더함)
 - 자세한 내용: [network-isolation/README.md](network-isolation/README.md#허용-대상-추가)
 
 ### 에이전트 네임스페이스 등록

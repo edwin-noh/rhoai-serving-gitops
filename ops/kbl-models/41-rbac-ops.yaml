@@ -1,6 +1,6 @@
 # Ops팀은 kbl-models 의 네임스페이스 관리자다 (기본 admin 롤).
 # - 네임스페이스 리소스는 Git(deploy/ops/kbl-models) → Argo CD 로 관리하고, 이 권한은 조회·장애 대응용이다
-# - ANP / EgressFirewall 은 admin 롤로 바꿀 수 없다 (cluster-admin 전용). 이것도 Git 으로만 바꾼다
+# - admin 롤은 NetworkPolicy 를 바꿀 수 있지만, 네트워크 정책은 Git(34~36, network/)으로만 바꾼다 (selfHeal 이 되돌림)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
