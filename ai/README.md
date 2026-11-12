@@ -113,9 +113,9 @@ oc logs -n kbl-maas deploy/<모델>-kserve -c main | grep 'vllm version'   # vLL
 ```
 호출은 MaaS API 키로 합니다: `https://maas.<apps 도메인>/v1/chat/completions` (body 의 `model` = `model.name`).
 
-## Gen AI playground (`kbl-models`, AI팀 admin 만)
+## Gen AI playground (`kbl-models`, AI admin 만)
 
-- 만들고 쓰는 것은 그룹 `kbl-ai-admins` 만 (`ops/kbl-models/42-rbac-ai-admin.yaml`). 일반 AI팀은 조회만
+- 만들고 쓰는 것은 그룹 `kbl-ai-admins` 만 (`ops/kbl-models/42-rbac-ai-admin.yaml`). AI 개발자(`kbl-ai-developers`)는 조회만
 - playground 는 같은 네임스페이스에서만 모델을 부른다. 다른 네임스페이스·클러스터 밖에서는 이 모델에 닿을 수 없다
 - 모델 엔드포인트 등록: Gen AI studio → AI asset endpoints → **Create endpoint**
   - URL: `https://<모델>-predictor.kbl-models.svc.cluster.local:8443/v1`

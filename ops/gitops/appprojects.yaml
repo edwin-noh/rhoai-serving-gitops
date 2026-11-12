@@ -1,6 +1,6 @@
-# Argo CD 프로젝트 (OpenShift GitOps 기본 인스턴스, Ops팀이 적용)
-# - kbl-ops: Ops팀. 클러스터 설정과 kbl-models 네임스페이스 리소스 전체
-# - kbl-ai: AI팀. kbl-models 의 InferenceService, kbl-maas 의 LLMInferenceService 만 동기화할 수 있다.
+# Argo CD 프로젝트 (OpenShift GitOps 기본 인스턴스, ai-ops 가 적용)
+# - kbl-ops: ai-ops(그룹 kbl-ai-ops). 클러스터 설정과 kbl-models 네임스페이스 리소스 전체
+# - kbl-ai: AI 개발자(kbl-ai-developers, kbl-ai-admins 포함). kbl-models 의 InferenceService, kbl-maas 의 LLMInferenceService 만 동기화할 수 있다.
 #   폴더(나중에 리포)에 다른 리소스를 넣어도 Argo CD 가 동기화를 거부한다
 # - roles: Argo CD UI/CLI 권한. OpenShift Group 이름으로 매핑한다 (ArgoCD CR 의 전역 RBAC 는 건드리지 않음)
 # 리포를 분리하면 sourceRepos 를 각 리포로 바꾼다. 폐쇄망이면 사내 Git 주소로 바꾼다
@@ -10,7 +10,7 @@ metadata:
   name: kbl-ops
   namespace: openshift-gitops
 spec:
-  description: Ops팀 - RHOAI 플랫폼 설정과 모델 네임스페이스
+  description: ai-ops - RHOAI 플랫폼 설정과 모델 네임스페이스
   sourceRepos:
     - https://github.com/edwin-noh/rhoai-serving-gitops.git
   destinations:
@@ -55,9 +55,9 @@ spec:
       - {group: monitoring.coreos.com, kind: ServiceMonitor, name: "openshift-gitops-*"}
   roles:
     - name: ops
-      description: Ops팀 - kbl-ops 앱 전체 권한
+      description: ai-ops - kbl-ops 앱 전체 권한
       groups:
-        - kbl-ops-admins
+        - kbl-ai-ops
       policies:
         - p, proj:kbl-ops:ops, applications, *, kbl-ops/*, allow
         - p, proj:kbl-ops:ops, logs, get, kbl-ops/*, allow
@@ -84,12 +84,12 @@ spec:
     - group: serving.kserve.io
       kind: LLMInferenceService
   roles:
-    # AI팀은 Git 에 커밋한 뒤 앱을 조회/Sync 만 한다 (앱 설정 변경·삭제 불가). Ops팀도 같은 권한으로 본다
+    # AI팀은 Git 에 커밋한 뒤 앱을 조회/Sync 만 한다 (앱 설정 변경·삭제 불가). ai-ops 도 같은 권한으로 본다
     - name: developers
       description: AI팀 - kbl-ai 앱 조회와 Sync
       groups:
         - kbl-ai-developers
-        - kbl-ops-admins
+        - kbl-ai-ops
       policies:
         - p, proj:kbl-ai:developers, applications, get, kbl-ai/*, allow
         - p, proj:kbl-ai:developers, applications, sync, kbl-ai/*, allow

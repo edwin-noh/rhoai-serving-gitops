@@ -17,7 +17,7 @@ NetworkPolicy 는 Ops팀이 Git 으로만 만들고(AI팀 Role 에는 NetworkPol
 
 | 출발 | 8443 | 8080 |
 |---|---|---|
-| 같은 네임스페이스 (Gen AI playground — AI팀 admin 만 운영) | ✅ 토큰 필요 | ❌ |
+| 같은 네임스페이스 (Gen AI playground — AI admin 만 운영) | ✅ 토큰 필요 | ❌ |
 | Ops 가 허용한 네임스페이스 (`../consumers/<ns>.yaml`) | ✅ 토큰 필요 | ❌ |
 | 모니터링 | — | ✅ |
 | 그 외 네임스페이스, 클러스터 밖 | ❌ | ❌ |
@@ -51,7 +51,7 @@ Ops 점검은 `oc port-forward`(NetworkPolicy 영향 없음)로 한다.
 - **토큰 인증(kube-rbac-proxy)**: 프록시가 파드 SA 토큰으로 TokenReview/SubjectAccessReview 를 보낸다 → ISVC `automountServiceAccountToken: true`,
   SA 에 `system:auth-delegator`(`../platform/rbac-model-serving-auth.yaml`). 같은 파드의 모델 컨테이너도 API 서버에 닿지만 SA 권한은 auth-delegator 뿐
 - **ModelCar** 는 노드(kubelet)가 이미지를 받으므로 파드 egress 와 무관하다. S3/URI 방식이면 storage-initializer 가 파드 안에서 받으므로 저장소를 허용해야 한다
-- **playground**: AI팀 admin(`kbl-ai-admins`, `../kbl-models/42-rbac-ai-admin.yaml`)만 만들고 쓴다. 모델 호출 토큰은 Secret `playground-caller-token`
+- **playground**: AI admin(`kbl-ai-admins`, `../kbl-models/42-rbac-ai-admin.yaml`)만 만들고 쓴다. 모델 호출 토큰은 Secret `playground-caller-token`
   (Gen AI studio → AI asset endpoints → Create endpoint 에 입력). playground 도 같은 ns 의 8443 + 토큰으로만 모델을 부른다
 - vLLM/HF 오프라인 env (`HF_HUB_OFFLINE`, `TRANSFORMERS_OFFLINE`, `VLLM_NO_USAGE_STATS`, `DO_NOT_TRACK`)는 시도 자체를 없애 타임아웃 지연을 줄인다
 

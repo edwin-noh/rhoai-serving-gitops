@@ -1,4 +1,4 @@
-# Ops팀: RHOAI 플랫폼과 모델 네임스페이스
+# Ops팀(ai-ops, 그룹 kbl-ai-ops): RHOAI 플랫폼과 모델 네임스페이스
 
 NFD, NVIDIA GPU Operator, RHOAI Operator, OpenShift GitOps 는 이미 설치되어 있다고 가정합니다.
 모든 파일은 값이 채워진 YAML 입니다. `nexus.internal.example:5000`, digest(`sha256:000…`), CA PEM, 그룹 이름
@@ -23,7 +23,7 @@ kbl-models/                        모델 네임스페이스 (Argo CD: kbl-ops-k
   36-netpol-model-ingress.yaml     모델 8443 ← 같은 ns + kbl.io/model-consumer=true ns / 8080 ← 모니터링만
   40-rbac-ai.yaml                  AI팀 조회 Role
   41-rbac-ops.yaml                 Ops 네임스페이스 admin
-  42-rbac-ai-admin.yaml            AI팀 admin(kbl-ai-admins) playground Role
+  42-rbac-ai-admin.yaml            AI admin(kbl-ai-admins) playground Role
   50-model-callers.yaml            Role model-caller, playground-caller SA·토큰
   network/allow-<ns>-<대상>.yaml   허용 대상별 NetworkPolicy, 접근 가능한 모델 목록 (AI팀 요청)
   runtimes/vllm-<등급>-<버전>.yaml

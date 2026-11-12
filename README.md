@@ -29,12 +29,20 @@ ModelCar 이미지 빌드·검증 도구는 [model-lifecycle](https://github.com
 
 ## 역할 분리
 
-| | Ops팀 | AI팀 |
+사용자는 그룹 3개로 나눕니다. Git·Argo CD 는 Ops(`ops/`, `kbl-ops`)와 AI(`ai/`, `kbl-ai`) 두 갈래 그대로입니다.
+
+| 그룹 | 역할 | 권한 |
+|---|---|---|
+| `kbl-ai-developers` | AI 개발자 (에이전트 개발자) | kbl-models·kbl-maas 조회, Argo CD `kbl-ai` 앱 조회/Sync, 대시보드 `allowedGroups` |
+| `kbl-ai-admins` | AI admin | AI 개발자 권한 + kbl-models 의 Gen AI playground (RHOAI 일부 edit, `ops/kbl-models/42-rbac-ai-admin.yaml`). `kbl-ai-developers` 에도 넣는다 |
+| `kbl-ai-ops` | ai-ops (클러스터 어드민 역할) | `ops/` 관리, Argo CD `kbl-ops` 전체, kbl-models·kbl-maas admin, 격리 정책 조회, 대시보드 `adminGroups` |
+
+| | Ops팀 (`kbl-ai-ops`) | AI팀 (`kbl-ai-developers`, `kbl-ai-admins`) |
 |---|---|---|
 | Git | `ops/` | `ai/` |
 | Argo CD | AppProject `kbl-ops` (클러스터 전체, MaaS 정책 포함) | AppProject `kbl-ai` (kbl-maas 의 LLMInferenceService, kbl-models 의 InferenceService 만) |
-| 클러스터 권한 | kbl-models admin + 격리 정책 조회 (변경은 Git→Argo CD) | Role `kbl-ai-developer`: kbl-models 조회 전용 (ISVC 변경은 Git→Argo CD) |
-| RHOAI 대시보드 | Auth `adminGroups` (kbl-ops-admins) | Auth `allowedGroups` (kbl-ai-developers) |
+| 클러스터 권한 | kbl-models admin + 격리 정책 조회 (변경은 Git→Argo CD) | Role `kbl-ai-developer`: kbl-models 조회 전용 (ISVC 변경은 Git→Argo CD). AI admin 은 playground Role 추가 |
+| RHOAI 대시보드 | Auth `adminGroups` (kbl-ai-ops) | Auth `allowedGroups` (kbl-ai-developers) |
 | 사용자 | Group 멤버십 `ops/platform/groups.yaml` | |
 | Nexus | `vllm-*` push, `models-validated` push(승인자) | `models-community` push |
 | 요청 | ← 런타임 추가, 다른 네임스페이스 접근, GPU quota | |

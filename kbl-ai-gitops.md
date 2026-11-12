@@ -257,7 +257,7 @@ kubelet 프로브와 `oc port-forward` 는 NetworkPolicy 영향을 받지 않는
 
 모델 이미지(ModelCar)·vLLM 이미지는 **노드(kubelet)** 가 받으므로 파드 egress 가 필요 없다.
 
-**Gen AI playground (예외 허용)**: `kbl-models` 안에서만 모델을 부른다. 만들고 쓰는 것은 **AI팀 admin(그룹 `kbl-ai-admins`)** 만
+**Gen AI playground (예외 허용)**: `kbl-models` 안에서만 모델을 부른다. 만들고 쓰는 것은 **AI admin(그룹 `kbl-ai-admins`)** 만
 (`ops/kbl-models/42-rbac-ai-admin.yaml` — OGXServer·ConfigMap·Secret 권한, NetworkPolicy·Deployment 권한 없음). playground 가 만든
 NetworkPolicy(operator 소유)는 playground 파드만 대상으로 한다. 모델 엔드포인트 등록: Gen AI studio → AI asset endpoints → Create endpoint 에
 `https://<모델>-predictor.kbl-models.svc.cluster.local:8443/v1` + Secret `playground-caller-token` 의 token.
@@ -427,7 +427,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 - MaaS: API 키 필수, 사용자별 토큰 한도(입력+출력), 키는 발급 시점 그룹 기억 → 그룹에서 빼면 키 revoke (Govern LLM access with MaaS §1.16.3), Subscription 삭제 시 그 키 모두 무효
 - MaaS 모델 파드는 gateway 외 경로로 호출할 수 없다
 - 모델 네임스페이스에서는 외부·다른 네임스페이스로 나갈 수 없다 (DNS·같은 ns·API 서버 6443 만). 다른 서비스를 불러야 하면 운영팀에 요청
-- playground 는 같은 네임스페이스에서만, AI팀 admin(`kbl-ai-admins`)만 쓴다. playground 도 모델은 토큰으로 호출한다
+- playground 는 같은 네임스페이스에서만, AI admin(`kbl-ai-admins`)만 쓴다. playground 도 모델은 토큰으로 호출한다
 
 **배포**
 - 이미지·모델은 digest(`@sha256:`)로만
