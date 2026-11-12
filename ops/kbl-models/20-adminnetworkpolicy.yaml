@@ -1,5 +1,9 @@
 # 클러스터 범위 상위 정책 (cluster-admin 전용, 프로젝트 관리자가 수정/삭제 불가)
-# 모델 파드의 egress 를 DNS / 허용 대상만 열고, 나머지 네임스페이스(같은 네임스페이스 포함)는 차단한다.
+# 역할: 어떤 NetworkPolicy 를 추가해도 열 수 없는 "바닥선". 세부 허용(어느 모델·어느 호출자)은 NetworkPolicy 가 한다.
+#   NetworkPolicy 는 합산(허용이 하나라도 있으면 열림)이고, Git 밖에서 추가된 NetworkPolicy 는 Argo selfHeal 이 지우지 않는다
+#   (RHOAI 컨트롤러도 프로젝트에 NetworkPolicy 를 만든다 — model-hub 에서 확인). 그래서 꼭 막아야 할 것은 여기서 Deny 한다.
+# - egress: DNS·API 서버만 Allow, 허용 대상은 NetworkPolicy 로 위임(Pass), 나머지 네임스페이스(같은 네임스페이스 포함) Deny
+# - ingress: 8080(vLLM 직결, <모델>-metrics Service)은 모니터링·같은 ns 점검 파드 외 Deny. 8443(토큰 인증 프록시)은 NetworkPolicy 가 결정
 #   Allow: 최종 허용 (NetworkPolicy 평가 안 함)
 #   Pass : NetworkPolicy 에 판단을 넘김 (어느 모델이 쓸 수 있는지는 network/allow-<ns>-<대상>.yaml)
 #   Deny : 최종 차단 (NetworkPolicy 로 열 수 없음)
@@ -22,6 +26,43 @@ spec:
         matchExpressions:
           - key: serving.kserve.io/inferenceservice
             operator: Exists
+  ingress:
+    # 메트릭 수집 (User Workload Monitoring)
+    - name: allow-monitoring-metrics
+      action: Allow
+      from:
+        - namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-user-workload-monitoring
+      ports:
+        - portNumber:
+            protocol: TCP
+            port: 8080
+    # 같은 네임스페이스의 모델이 아닌 파드 (Ops 점검용)
+    - name: allow-local-ops-pods-8080
+      action: Allow
+      from:
+        - pods:
+            namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: kbl-models
+            podSelector:
+              matchExpressions:
+                - key: serving.kserve.io/inferenceservice
+                  operator: DoesNotExist
+      ports:
+        - portNumber:
+            protocol: TCP
+            port: 8080
+    # vLLM 직결 포트는 그 외 어디서도 열 수 없다 (토큰 인증 우회 차단 — PoC 에서 확인된 경로)
+    - name: deny-direct-vllm
+      action: Deny
+      from:
+        - namespaces: {}
+      ports:
+        - portNumber:
+            protocol: TCP
+            port: 8080
   egress:
     - name: allow-dns
       action: Allow

@@ -1,0 +1,44 @@
+# llm-d(MaaS) 모델 파드의 ingress 바닥선 (cluster-admin 전용). MaaS gateway 를 거치지 않는 호출을 막는다.
+# - NetworkPolicy(30-networkpolicy.yaml)에 허용이 추가되더라도 MaaS 인증·토큰 한도를 우회할 수 없게 한다
+# - 허용: MaaS gateway(openshift-ingress), 같은 네임스페이스(EPP → vLLM), 메트릭 수집. 나머지 네임스페이스 Deny
+# - gateway → vLLM 은 TLS(8000) 등 컨트롤러가 정하는 포트라 포트는 지정하지 않는다
+# - kubelet 프로브·hostNetwork 트래픽은 ANP 대상이 아니다
+# - priority 는 kbl-models(50)와 겹치지 않게 51 (OVN-Kubernetes 0~99, 낮을수록 우선)
+apiVersion: policy.networking.k8s.io/v1alpha1
+kind: AdminNetworkPolicy
+metadata:
+  name: model-isolation-kbl-maas
+spec:
+  priority: 51
+  subject:
+    pods:
+      namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kbl-maas
+      # llm-d 가 vLLM·EPP 파드에 붙이는 라벨
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: llminferenceservice
+  ingress:
+    - name: allow-maas-gateway
+      action: Allow
+      from:
+        - namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-ingress
+    - name: allow-same-namespace
+      action: Allow
+      from:
+        - namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: kbl-maas
+    - name: allow-monitoring
+      action: Allow
+      from:
+        - namespaces:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-user-workload-monitoring
+    - name: deny-other-namespaces
+      action: Deny
+      from:
+        - namespaces: {}

@@ -1,3 +1,6 @@
+# 모델 파드 DNS 허용 (31 default-deny 와 짝).
+# ANP(20) 의 allow-dns 가 있으면 DNS 는 ANP 에서 Allow 로 확정되어 이 정책은 평가되지 않는다.
+# ANP 가 적용되지 않은 경우(삭제·오류·API 변경)에도 NetworkPolicy 계층만으로 "DNS 외 차단" 이 유지되게 하는 예비 규칙이다.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
