@@ -130,9 +130,97 @@ AI팀은 클러스터에서 모델을 직접 수정할 수 없다 (PoC 확인: `
 
 ---
 
-## 5. 네트워크
+## 5. vLLM 버전·지원 등급·모델 출처 관리
 
-### 5.1 모델 네임스페이스에서 열려 있는 것 / 막혀 있는 것
+GitOps 에서는 **라벨로 표시**하고, 실제 보증은 **레지스트리(Nexus) repo 와 push 권한**으로 한다.
+라벨은 누구나 붙일 수 있으므로 "GA 라벨 = 승인된 이미지" 를 라벨이 보장하지 못한다. 대신 이미지가 어느 repo 에서 왔는지가 보장한다.
+
+```mermaid
+flowchart LR
+  subgraph NX["Nexus (레지스트리)"]
+    direction TB
+    VGA["vllm-ga"]
+    VFA["vllm-fast"]
+    VUP["vllm-upstream"]
+    MV["models-validated<br/>(승인자만 push)"]
+    MC["models-community<br/>(AI팀 push)"]
+  end
+  subgraph OPSR["운영팀 런타임 (ops/*/runtimes)"]
+    RT["vllm-{등급}-{버전}<br/>label kbl.io/runtime-tier<br/>annotation opendatahub.io/runtime-version<br/>image @sha256 ← vllm-{등급} repo"]
+  end
+  subgraph AIM["AI팀 모델 (ai/raw, ai/maas)"]
+    MD["label kbl.io/runtime-tier · kbl.io/model-source<br/>runtime / baseRefs = vllm-{등급}-{버전}<br/>storageUri / model.uri @sha256 ← models-{출처} repo"]
+  end
+  VGA & VFA & VUP --> RT
+  MV & MC --> MD
+  RT -->|이름으로 참조| MD
+```
+
+### 5.1 vLLM 버전과 지원 등급 (운영팀)
+
+| 등급 | `kbl.io/runtime-tier` | 이미지 repo (Nexus) | 런타임 이름 예 | RHOAI 상의 의미 (Configuring your model-serving platform §1.3) |
+|---|---|---|---|---|
+| GA | `ga` | `vllm-ga` (RHAIIS GA, `registry.redhat.io/rhaii/vllm-cuda-rhel9`) | `vllm-ga-3-5-2` | Supported (GA). 공식 지원 annotation 붙이지 않음 |
+| Fast | `fast` | `vllm-fast` (`registry.redhat.io/rhaii-early-access`) | `vllm-fast-3-6-0-ea1` | Limited support — `opendatahub.io/support-status: unsupported` + `opendatahub.io/unsupported-status-accepted: "true"` + `opendatahub.io/fast-version` (§1.4, §2.6) |
+| Upstream | `upstream` | `vllm-upstream` (커뮤니티 vLLM) | `vllm-upstream-0-28-0` | Unsupported (custom). 공식 annotation 없음 |
+
+| 표시 | 위치 | 의미 |
+|---|---|---|
+| 런타임 **이름** `vllm-<등급>-<버전>` | ServingRuntime(Raw), LLMInferenceServiceConfig(MaaS) | 모델은 이름으로만 참조하므로 이름만 보고 등급·버전을 안다. 여러 버전을 같이 둘 수 있다 |
+| `kbl.io/runtime-tier` | 런타임 + 모델(ISVC/LLMISVC) 라벨 | 등급 조회·리뷰용 (컨트롤러는 읽지 않음) |
+| `opendatahub.io/runtime-version` | 런타임 annotation | upstream vLLM 버전 (예: `v0.24.0`). RHOAI 기본 템플릿과 같은 표기 (관찰, 3.5 미확인) |
+| `image: …@sha256:` | 런타임 컨테이너 | 실제 실행 이미지. `vllm-<등급>` repo 에서만 가져온다 |
+
+- 현재 매니페스트에는 자체 annotation `kbl.io/support-status`(supported/unsupported)가 남아 있다. 공식 키와 의미가 달라
+  정리 대상이다 ([LABELS-ANNOTATIONS.md](LABELS-ANNOTATIONS.md) 권고): GA·Upstream 은 제거, Fast 런타임을 추가할 때 공식 annotation 3개를 붙인다
+- 새 vLLM 버전 = **새 런타임 파일 추가** (기존 런타임 수정 금지 — 그 런타임을 쓰는 모델이 모두 재기동된다). 모델은 AI팀이 하나씩 옮긴다
+- 등급 변경(예: fast → ga) = 모델 파일에서 `runtime`(또는 `baseRefs`)과 `kbl.io/runtime-tier` 를 **한 커밋**에 함께 바꾼다. 엔드포인트는 그대로
+
+### 5.2 모델 출처: validated / community (AI팀 + 승인자)
+
+| 출처 | `kbl.io/model-source` | 모델 이미지 repo (Nexus) | push 권한 | 의미 |
+|---|---|---|---|---|
+| Validated | `validated` | `models-validated` | **승인자만** | Red Hat 검증 모델 또는 사내 승인을 거친 모델 |
+| Community | `community` | `models-community` | AI팀 | 반입 검사(스캔)는 통과했지만 승인 전 |
+
+- 모델 파일의 `storageUri`(Raw) / `model.uri`(MaaS) repo 와 `kbl.io/model-source` 가 **일치**해야 한다 (PR 리뷰에서 확인)
+- 승격(community → validated): 승인자가 이미지를 `models-validated` 로 **digest 그대로 복사** (`skopeo copy --preserve-digests`) →
+  AI팀이 `storageUri` repo 와 라벨을 한 커밋으로 변경. digest 가 같으므로 검사한 모델 그대로다
+- 모델 이미지는 `hf-modelcar`(검사 게이트 통과 시에만 빌드)로 만들고 push 시 출력되는 digest 를 쓴다
+
+### 5.3 조회
+
+```bash
+# 런타임별 등급·vLLM 버전·이미지
+oc get servingruntime -A -L kbl.io/runtime-tier \
+  -o custom-columns='NS:.metadata.namespace,NAME:.metadata.name,VLLM:.metadata.annotations.opendatahub\.io/runtime-version,IMAGE:.spec.containers[0].image'
+oc get llminferenceserviceconfig -n kbl-maas -L kbl.io/runtime-tier \
+  -o custom-columns='NAME:.metadata.name,VLLM:.metadata.annotations.opendatahub\.io/runtime-version,IMAGE:.spec.template.containers[0].image'
+
+# 모델별 런타임·등급·출처
+oc get isvc -n kbl-models -L kbl.io/runtime-tier,kbl.io/model-source \
+  -o custom-columns='NAME:.metadata.name,RUNTIME:.spec.predictor.model.runtime,URI:.spec.predictor.model.storageUri'
+oc get llmisvc -n kbl-maas -L kbl.io/runtime-tier,kbl.io/model-source
+
+# 실제 실행 중인 vLLM 버전 (로그)
+oc logs -n kbl-maas deploy/<모델>-kserve -c main | grep 'vllm version'
+```
+
+### 5.4 보증의 경계
+
+| 무엇을 | 무엇이 보증하나 | 라벨의 역할 |
+|---|---|---|
+| GA 이미지만 GA 런타임에 | Nexus `vllm-ga` push 권한 + 런타임은 운영팀만 수정 | 표시 |
+| validated 모델만 validated 로 | Nexus `models-validated` push 권한(승인자) | 표시 |
+| 라벨과 실제 repo 일치 | PR 리뷰 | — |
+| 검사한 이미지 그대로 실행 | digest 참조 (`@sha256:`) | — |
+| (다음 단계) 승인 이미지만 실행 | cosign 서명 + `ClusterImagePolicy` | — |
+
+---
+
+## 6. 네트워크
+
+### 6.1 모델 네임스페이스에서 열려 있는 것 / 막혀 있는 것
 
 #### `kbl-models` (Raw)
 
@@ -184,7 +272,7 @@ AI팀은 클러스터에서 모델을 직접 수정할 수 없다 (PoC 확인: `
 
 네임스페이스 라벨 `maas.opendatahub.io/gateway-access=true` 가 있어야 MaaS gateway 가 이 네임스페이스의 HTTPRoute 를 받는다 (`ops/kbl-maas/00-namespace.yaml`).
 
-### 5.2 클러스터 안의 에이전트 앱이 호출할 때
+### 6.2 클러스터 안의 에이전트 앱이 호출할 때
 
 ```mermaid
 flowchart LR
@@ -224,7 +312,7 @@ flowchart LR
 
 예시 매니페스트: [examples/agent-client.yaml](examples/agent-client.yaml) (egress NetworkPolicy, API 키 Secret, 두 경로 호출 Job), Python: [examples/README.md](examples/README.md)
 
-### 5.3 클러스터 밖의 에이전트가 MaaS gateway 를 거쳐 호출할 때
+### 6.3 클러스터 밖의 에이전트가 MaaS gateway 를 거쳐 호출할 때
 
 ```mermaid
 flowchart LR
@@ -260,9 +348,9 @@ curl https://maas.<apps 도메인>/v1/chat/completions \
 
 ---
 
-## 6. AI팀이 바꾸면 배포된 모델에 일어나는 일
+## 7. AI팀이 바꾸면 배포된 모델에 일어나는 일
 
-### 6.1 공통 흐름
+### 7.1 공통 흐름
 
 ```mermaid
 sequenceDiagram
@@ -281,7 +369,7 @@ sequenceDiagram
   Note over AI,Pod: 대시보드·oc 로 직접 바꾼 값은 selfHeal 이 Git 값으로 되돌린다
 ```
 
-### 6.2 Raw (`ai/raw/<모델>.yaml` → `kbl-models`)
+### 7.2 Raw (`ai/raw/<모델>.yaml` → `kbl-models`)
 
 | AI팀 변경 | 배포된 모델에 일어나는 일 | 호출자 영향 |
 |---|---|---|
@@ -299,7 +387,7 @@ sequenceDiagram
 
 GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단(새 파드 Ready 후 기존 파드 종료)으로 할 수 있다. 대신 교체 동안 GPU 가 2배 필요하다.
 
-### 6.3 MaaS (`ai/maas/<모델>.yaml` → `kbl-maas`)
+### 7.3 MaaS (`ai/maas/<모델>.yaml` → `kbl-maas`)
 
 | AI팀 변경 | 배포된 모델에 일어나는 일 | 호출자 영향 |
 |---|---|---|
@@ -310,7 +398,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 | 파일 삭제 | LLMISVC 삭제. 운영팀의 MaaSModelRef·Subscription·AuthPolicy 는 남아 `Failed` (PoC 확인) | 호출 실패 |
 | `baseRefs`·`router.gateway`·`image`·`enable-auth` | — (AI팀이 바꾸지 않음. 리뷰에서 거절) | — |
 
-### 6.4 운영팀 변경이 모델에 주는 영향 (참고)
+### 7.4 운영팀 변경이 모델에 주는 영향 (참고)
 
 | 운영팀 변경 | 영향 |
 |---|---|
@@ -324,7 +412,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 
 ---
 
-## 7. 제약사항 요약
+## 8. 제약사항 요약
 
 **호출**
 - Raw: 토큰 인증 필수, 클러스터 안에서만, 등록된 호출자만. 호출 권한은 `kbl-models` 의 모든 Raw 모델 단위
@@ -345,7 +433,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 
 ---
 
-## 8. 요청 절차 (누가 · 어느 파일)
+## 9. 요청 절차 (누가 · 어느 파일)
 
 | 요청 | 요청자 → 처리 | 파일 |
 |---|---|---|
@@ -360,7 +448,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 
 ---
 
-## 9. 응답 코드·문제 해결
+## 10. 응답 코드·문제 해결
 
 | 증상 | Raw | MaaS |
 |---|---|---|
@@ -376,7 +464,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 
 ---
 
-## 10. KB Life 환경에 적용할 때 바꿀 값
+## 11. KB Life 환경에 적용할 때 바꿀 값
 
 | 항목 | PoC 값 | KB Life |
 |---|---|---|
@@ -391,7 +479,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 
 ---
 
-## 11. 관련 문서
+## 12. 관련 문서
 
 - [README.md](README.md) — deploy 개요
 - [ai/README.md](ai/README.md) — AI팀 작업 규칙 (Raw·MaaS)
