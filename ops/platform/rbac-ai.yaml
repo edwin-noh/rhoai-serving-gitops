@@ -1,4 +1,4 @@
-# AI팀이 ISVC 에 지정할 HardwareProfile 을 조회할 수 있게 한다 (프로파일은 redhat-ods-applications 에 있다).
+# AI팀이 ISVC·워크벤치에 지정할 HardwareProfile 을 조회할 수 있게 한다 (프로파일은 redhat-ods-applications 에 있다).
 # kbl-models 안의 권한은 ops/kbl-models/40-rbac-ai.yaml. 그룹 이름은 사이트 값으로 바꾼다
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -23,3 +23,36 @@ subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
     name: kbl-ai-developers
+---
+# AI 개발자 워크벤치 롤: 지정 프로젝트(ops/consumers/<ns>.yaml 의 RoleBinding)에서 워크벤치만 만들고 쓴다
+# - RHOAI 3.5 Working on projects 5장 "Manage access to projects": 워크벤치 = kubeflow.org Notebook.
+#   라벨 opendatahub.io/dashboard: "true" 가 있으면 대시보드 Permissions 탭에 AI role 로 표시된다
+# - edit(Contributor) 를 쓰지 않는다: Deployment/Pod 직접 생성, NetworkPolicy·RoleBinding·ServiceAccount 변경이 가능해진다
+# - 대시보드가 워크벤치를 만들 때 쓰는 verb 는 3.5 문서에 목록이 없다 — 대시보드로 만들어 보며 확인 (3.5 미확인)
+# - 한계: Notebook 을 API 로 직접 만들면 이미지를 임의로 지정할 수 있다 (대시보드는 등록된 이미지만 보여 줌).
+#   막으려면 클러스터 이미지 정책(허용 레지스트리 = Nexus)을 쓴다
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kbl-ai-workbench
+  labels:
+    opendatahub.io/dashboard: "true"
+  annotations:
+    openshift.io/display-name: KBL AI workbench
+    openshift.io/description: "워크벤치 생성·시작·정지·삭제, 스토리지·연결 관리 (Deployment/Pod 직접 생성 불가)"
+rules:
+  - apiGroups: ["kubeflow.org"]
+    resources: ["notebooks"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # 워크벤치 스토리지
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # 연결(connection)·환경 변수
+  - apiGroups: [""]
+    resources: ["secrets", "configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # 상태·로그 확인
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "events", "services"]
+    verbs: ["get", "list", "watch"]

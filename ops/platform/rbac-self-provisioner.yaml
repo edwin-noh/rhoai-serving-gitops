@@ -1,0 +1,25 @@
+# 프로젝트 자기 생성(self-provisioner)을 ai-ops 와 AI admin 으로 제한한다.
+# - OpenShift 기본 바인딩(같은 이름)은 system:authenticated:oauth(로그인한 모든 사용자)에게 준다.
+#   그러면 AI 개발자(kbl-ai-developers)도 프로젝트를 만들고, 그 안에서 Deployment/Pod 를 마음대로 띄울 수 있다
+#   (kbl-models 에서 edit 롤을 주지 않은 의도를 우회). AI 개발자는 지정 프로젝트(ops/consumers/)에서만 작업한다
+# - 근거: RHOAI 3.5 Managing OpenShift AI, 10장 Next steps — self-provisioner 를 지정 그룹에만 부여
+# - autoupdate "false" 가 없으면 API 서버가 재시작할 때 기본값(system:authenticated:oauth)으로 되돌린다
+# - 이미 만들어진 프로젝트에는 영향이 없다 (만든 사람은 계속 그 프로젝트의 admin)
+# - 되돌리기: subjects 를 Group system:authenticated:oauth 하나로, autoupdate 를 "true" 로
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: self-provisioners
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "false"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: self-provisioner
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kbl-ai-ops
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kbl-ai-admins

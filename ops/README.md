@@ -12,7 +12,8 @@ platform/                          클러스터 설정 (Argo CD: kbl-ops-platfor
   hardwareprofile-gpu.yaml         HardwareProfile gpu-1x
   hardwareprofile-gpu-2x.yaml      HardwareProfile gpu-2x (tensor parallel)
   registry-ca.yaml                 Nexus CA (ConfigMap + image.config additionalTrustedCA)
-  rbac-ai.yaml                     AI팀 HardwareProfile 조회 권한 (redhat-ods-applications)
+  rbac-ai.yaml                     AI팀 HardwareProfile 조회 권한 (redhat-ods-applications), 워크벤치 ClusterRole kbl-ai-workbench
+  rbac-self-provisioner.yaml       프로젝트 생성은 kbl-ai-ops, kbl-ai-admins 만 (OpenShift 기본 self-provisioners 덮어씀)
   mirror/imageset-config.yaml      oc-mirror 입력 파일 (동기화 대상 아님)
 kbl-models/                        모델 네임스페이스 (Argo CD: kbl-ops-kbl-models)
   00-namespace.yaml

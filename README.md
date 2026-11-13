@@ -33,9 +33,9 @@ ModelCar 이미지 빌드·검증 도구는 [model-lifecycle](https://github.com
 
 | 그룹 | 역할 | 권한 |
 |---|---|---|
-| `kbl-ai-developers` | AI 개발자 (에이전트 개발자) | kbl-models·kbl-maas 조회, Argo CD `kbl-ai` 앱 조회/Sync, 대시보드 `allowedGroups` |
-| `kbl-ai-admins` | AI admin | AI 개발자 권한 + kbl-models 의 Gen AI playground (RHOAI 일부 edit, `ops/kbl-models/42-rbac-ai-admin.yaml`). `kbl-ai-developers` 에도 넣는다 |
-| `kbl-ai-ops` | ai-ops (클러스터 어드민 역할) | `ops/` 관리, Argo CD `kbl-ops` 전체, kbl-models·kbl-maas admin, 격리 정책 조회, 대시보드 `adminGroups` |
+| `kbl-ai-developers` | AI 개발자 (에이전트 개발자) | kbl-models·kbl-maas 조회, Argo CD `kbl-ai` 앱 조회/Sync, 대시보드 `allowedGroups`, 지정 프로젝트(`kbl-poc-agent`)에서 워크벤치. **프로젝트 생성 불가** |
+| `kbl-ai-admins` | AI admin | AI 개발자 권한 + kbl-models 의 Gen AI playground (RHOAI 일부 edit, `ops/kbl-models/42-rbac-ai-admin.yaml`). `kbl-ai-developers` 에도 넣는다. 프로젝트 생성 가능 |
+| `kbl-ai-ops` | ai-ops (클러스터 어드민 역할) | `ops/` 관리, Argo CD `kbl-ops` 전체, kbl-models·kbl-maas admin, 격리 정책 조회, 대시보드 `adminGroups`, 프로젝트 생성 가능 |
 
 | | Ops팀 (`kbl-ai-ops`) | AI팀 (`kbl-ai-developers`, `kbl-ai-admins`) |
 |---|---|---|

@@ -22,6 +22,20 @@ MaaS(llm-d) 모델은 Kubernetes RBAC 를 쓰지 않는다 — `../maas-policy/`
    ```
 4. 에이전트팀에 클라이언트 예시 전달: `../../examples/agent-client.yaml`
 
+## 워크벤치 프로젝트로 쓰기 (AI 개발자)
+
+AI 개발자(`kbl-ai-developers`)는 프로젝트를 만들 수 없고(`../platform/rbac-self-provisioner.yaml`), 여기 등록된 네임스페이스에서만 작업한다.
+`kbl-poc-agent.yaml` 처럼 두 가지를 넣으면 RHOAI 대시보드에서 그 프로젝트의 워크벤치를 쓸 수 있다.
+
+| 항목 | 리소스 | 효과 |
+|---|---|---|
+| 대시보드 표시 | Namespace 라벨 `opendatahub.io/dashboard: "true"` | 대시보드 Projects 목록에 나온다 |
+| 권한 | RoleBinding `kbl-ai-workbench` → ClusterRole `kbl-ai-workbench` | 워크벤치(Notebook)·스토리지(PVC)·연결(Secret/ConfigMap) 관리, 파드·로그 조회. Deployment/Pod 직접 생성 불가 |
+| 모델 호출 | 호출 RoleBinding 에 Group `system:serviceaccounts:<ns>` | 워크벤치 파드(노트북마다 SA)가 자기 SA 토큰으로 ISVC 호출 |
+
+근거: RHOAI 3.5 *Working on projects* 5장 "Manage access to projects" (워크벤치 커스텀 롤).
+대시보드가 쓰는 verb 는 문서에 목록이 없어 대시보드로 직접 만들어 보며 확인한다. 권한 오류가 나면 해당 리소스·verb 를 롤에 추가한다.
+
 ## 해지
 - 파일을 지우고 커밋한다. 앱이 `prune: false` 라 리소스는 남으므로 **직접 지운다**:
   ```bash

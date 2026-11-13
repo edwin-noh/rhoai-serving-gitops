@@ -1,5 +1,5 @@
 # 모델 호출자 등록: 에이전트 네임스페이스 kbl-poc-agent (호출자 하나 = 파일 하나, Ops팀 관리)
-# 이 파일 하나로 (1) 네트워크 허용 (2) ISVC 토큰 호출 권한 이 함께 열린다. MaaS 모델은 MaaSSubscription/AuthPolicy 로 별도 관리
+# 이 파일 하나로 (1) 네트워크 허용 (2) ISVC 토큰 호출 권한 (3) AI 개발자 워크벤치 가 함께 열린다. MaaS 모델은 MaaSSubscription/AuthPolicy 로 별도 관리
 
 # (1) 네트워크: kbl-models 의 ingress NetworkPolicy(33)가 이 라벨이 있는 네임스페이스만 8443 으로 받는다
 #     네임스페이스 자체는 에이전트팀 소유 → 라벨만 Server-Side Apply 로 소유하고, Argo CD 가 지우지 않게 한다
@@ -11,6 +11,8 @@ metadata:
     argocd.argoproj.io/sync-options: Delete=false,Prune=false
   labels:
     kbl.io/model-consumer: "true"
+    # RHOAI 대시보드 Projects 목록에 표시 (워크벤치 프로젝트)
+    opendatahub.io/dashboard: "true"
 ---
 # 호출 신원. 에이전트 파드는 이 SA 로 실행하고, 마운트된 SA 토큰을 Bearer 로 보낸다
 apiVersion: v1
@@ -33,7 +35,23 @@ subjects:
   - kind: ServiceAccount
     name: agent
     namespace: kbl-poc-agent
-  # 네임스페이스의 모든 SA 를 허용하려면 위 대신:
-  # - apiGroup: rbac.authorization.k8s.io
-  #   kind: Group
-  #   name: system:serviceaccounts:kbl-poc-agent
+  # 워크벤치 파드는 노트북마다 SA 가 따로 생긴다. 네임스페이스의 모든 SA 가 자기 토큰으로 호출할 수 있게 한다
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: system:serviceaccounts:kbl-poc-agent
+---
+# (3) AI 개발자 워크벤치: 이 프로젝트에서 워크벤치만 만들고 쓴다 (ClusterRole kbl-ai-workbench, ops/platform/rbac-ai.yaml)
+#     AI 개발자는 프로젝트를 만들 수 없다 (ops/platform/rbac-self-provisioner.yaml). kbl-ai-admins 멤버는 developers 에도 있어 함께 받는다
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kbl-ai-workbench
+  namespace: kbl-poc-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kbl-ai-workbench
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kbl-ai-developers
