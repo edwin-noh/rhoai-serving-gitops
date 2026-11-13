@@ -28,8 +28,9 @@ spec:
       autoSelect: false
   containers:
     - name: kserve-container
-      # 실제 digest 로 바꾼다
-      image: nexus.internal.example:5000/vllm-community/vllm-openai@sha256:0000000000000000000000000000000000000000000000000000000000000000
+      # PoC: Docker Hub 에서 직접 받는다 (vllm/vllm-openai:v0.28.0 의 linux/amd64 digest, CUDA 13.0.2 — 노드 드라이버 595.91/CUDA 13.2 에서 동작)
+      # KB Life: Nexus vllm-community repo 로 반입한 같은 digest 로 바꾼다 (nexus.<사내>/vllm-community/vllm-openai@sha256:...)
+      image: docker.io/vllm/vllm-openai@sha256:2286e8533ca8b6bc777594bae30524f1426ba46ca21797524e06df6a94b06635
       # 이미지 기본 entrypoint 대신 RHAIIS 런타임과 같은 방식으로 실행한다 (커뮤니티 이미지에는 python 이 없을 수 있음)
       command:
         - python3
