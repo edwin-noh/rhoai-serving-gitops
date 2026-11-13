@@ -2,6 +2,7 @@
 # 같은 모델을 ai/maas 의 LLMInferenceService(MaaS)로도 띄워 두 방식을 동시에 테스트한다
 # - GPU 1장을 time-slicing 으로 2개로 나눠 쓴다 (openshift-cluster-gitops gpu-operator overlay 의 time-sliced-2)
 # - kanana-1.5-2.1b 는 GA 런타임(vLLM 0.24, transformers 설정 검증)에서 hidden_size/heads 검증 오류로 기동하지 않아 교체했다
+# - 런타임: community(vLLM 0.28.0) 테스트 중. MaaS 쪽(ai/maas)은 GA 런타임(vLLM 0.24) 그대로라 두 버전을 비교할 수 있다
 # AI팀이 관리한다. 허용되는 필드와 규칙은 ai/README.md
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
@@ -21,7 +22,7 @@ metadata:
     # (ops/kbl-models/50-model-callers.yaml). 프록시가 API 서버를 호출하므로 아래 automountServiceAccountToken: true 가 필요
     security.opendatahub.io/enable-auth: "true"
   labels:
-    kblife.co.kr/runtime-tier: ga
+    kblife.co.kr/runtime-tier: community
     kblife.co.kr/model-source: community
     opendatahub.io/dashboard: "true"
     opendatahub.io/genai-asset: "true"
@@ -39,7 +40,7 @@ spec:
     model:
       modelFormat:
         name: vLLM
-      runtime: vllm-ga-3-5-2
+      runtime: vllm-community-0-28-0
       storageUri: oci://quay.io/gunoh/modelcar-qwen3-1.7b@sha256:eb3010d967587f023944a55dacfa5b549d16fc66bda5c6ea195e7fad39d09dce
       args:
         # GPU time-slicing(2개)으로 MaaS 쪽 같은 모델과 GPU 1장(12GiB)을 나눠 쓴다. 두 파드 합이 0.9 를 넘지 않게 한다
