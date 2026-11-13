@@ -1,5 +1,5 @@
 # AI admin(그룹 kbl-ai-admins): kbl-models 에서 Gen AI playground 를 쓴다
-# - 권한 내용은 ClusterRole kbl-ai-playground (ops/platform/rbac-ai.yaml). AI 개발자도 같은 롤을 에이전트 프로젝트(ops/consumers/)에서 받는다
+# - 권한 내용은 ClusterRole kbl-ai-playground (ops/platform/rbac-ai.yaml)
 # - 조회는 클러스터 전체 view(kbl-ai-admins-view)로 받는다
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
