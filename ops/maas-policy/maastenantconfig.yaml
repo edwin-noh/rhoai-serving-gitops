@@ -1,0 +1,27 @@
+# [비활성] MaaS 테넌트 설정 (API 키 만료 상한, telemetry). 파일 전체가 주석이라 kbl-ops-maas-policy 앱이 동기화하지 않는다.
+# - 지금은 openshift-cluster-gitops 리포(Argo 앱 openshift-ai-operator)가 관리한다:
+#   components/operators/openshift-ai/instance-3.x/components/components-aigateway-maas/maastenantconfig.yaml
+# - 이 리포로 옮길 때: 위 파일을 그쪽에서 빼고(그 앱은 prune 끔이라 리소스는 남는다) 아래 주석을 해제한다.
+#   두 앱이 같은 리소스를 관리하면 서로 되돌리므로 한 곳에서만 관리한다
+# - default-tenant 는 MaaS controller 가 테넌트 네임스페이스마다 하나 만든다 (RHOAI 3.5 Govern LLM access with MaaS, 1장 CRD 목록).
+#   Argo 는 spec 만 맞춘다 (Server-Side Apply)
+# - apiKeys.maxExpirationDays: 사용자가 만드는 API 키의 최대 만료일. 미설정 시 기본 90일. 변경 후 새로 만드는 키부터 적용
+#   (문서 1.16.4 는 deprecated Tenant CR 로 설명하지만, 3.5 의 MaasTenantConfig CRD 에 같은 필드가 있다 — oc explain 확인)
+#
+# apiVersion: maas.opendatahub.io/v1alpha1
+# kind: MaasTenantConfig
+# metadata:
+#   name: default-tenant
+#   namespace: models-as-a-service
+#   annotations:
+#     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true,ServerSideApply=true
+# spec:
+#   apiKeys:
+#     maxExpirationDays: 90
+#   telemetry:
+#     enabled: true
+#     metrics:
+#       captureGroup: false
+#       captureModelUsage: true
+#       captureOrganization: true
+#       captureUser: true
