@@ -1,4 +1,7 @@
 # 프로젝트 지침
+이 프로젝트는 KB life RHOAI 구현을 테스트하기 위한 프로젝트이다.
+/Users/edwin/Workspace/kblife-rhoai 하위의 폴더들은 모두 연관된 프로젝트이니 자유롭게 참조하면 된다.
+또한, /Users/edwin/Library/Mobile Documents/com~apple~CloudDocs/Obsidian/main-vault/20_Projects/KB-Life의 내용은 프로젝트 설계 중 고려했던 사항이 있으므로 참고 가능하다.
 
 ## RHOAI 버전 기준
 - 모든 설계, 매니페스트, 필드, 기능 지원 여부는 **Red Hat OpenShift AI Self-Managed 3.5** 를 기준으로 한다.
