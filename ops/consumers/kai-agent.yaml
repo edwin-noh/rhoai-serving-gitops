@@ -1,0 +1,91 @@
+# 모델 호출자 등록: 에이전트 네임스페이스 kai-agent (호출자 하나 = 파일 하나, Ops팀 관리)
+# 이 파일 하나로 (1) 네트워크 허용 (2) ISVC 토큰 호출 권한 (3) AI 개발자 워크벤치·playground 가 함께 열린다. MaaS 모델은 MaaSSubscription/AuthPolicy 로 별도 관리
+
+# (1) 네트워크: kbl-models 의 ingress NetworkPolicy(33)가 이 라벨이 있는 네임스페이스만 8443 으로 받는다
+#     네임스페이스 자체는 에이전트팀 소유 → 라벨만 Server-Side Apply 로 소유하고, Argo CD 가 지우지 않게 한다
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kai-agent
+  annotations:
+    argocd.argoproj.io/sync-options: Delete=false,Prune=false
+  labels:
+    kbl.io/model-consumer: "true"
+    # RHOAI 대시보드 Projects 목록에 표시 (워크벤치·playground 프로젝트)
+    opendatahub.io/dashboard: "true"
+---
+# 호출 신원. 에이전트 파드는 이 SA 로 실행하고, 마운트된 SA 토큰을 Bearer 로 보낸다
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agent
+  namespace: kai-agent
+---
+# (2) 권한: kbl-models 의 공용 Role model-caller (ops/kbl-models/50-model-callers.yaml)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: caller-kai-agent
+  namespace: kbl-models
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: model-caller
+subjects:
+  - kind: ServiceAccount
+    name: agent
+    namespace: kai-agent
+  # 워크벤치 파드는 노트북마다 SA 가 따로 생긴다. 네임스페이스의 모든 SA(아래 playground-caller 포함)가 자기 토큰으로 호출할 수 있게 한다
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: system:serviceaccounts:kai-agent
+---
+# (3) AI 개발자 워크벤치·playground (ClusterRole kbl-ai-workbench, kbl-ai-playground — ops/platform/rbac-ai.yaml)
+#     프로젝트 목록에는 이 프로젝트와 조회 권한이 있는 kbl-models·kbl-maas 만 보인다
+#     AI 개발자는 프로젝트를 만들 수 없다 (ops/platform/rbac-self-provisioner.yaml). kbl-ai-admins 멤버는 developers 에도 있어 함께 받는다
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kbl-ai-workbench
+  namespace: kai-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kbl-ai-workbench
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kbl-ai-developers
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kbl-ai-playground
+  namespace: kai-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kbl-ai-playground
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kbl-ai-developers
+---
+# playground 의 모델 호출 신원 (ops/kbl-models/50-model-callers.yaml 과 같은 방식)
+# Gen AI studio → AI asset endpoints → Create endpoint 에 모델 주소(https://<모델>-predictor.kbl-models.svc.cluster.local:8443/v1)와
+# 아래 Secret 의 token 을 넣는다. 호출 권한은 위 caller-kai-agent 의 system:serviceaccounts:kai-agent 로 받는다
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: playground-caller
+  namespace: kai-agent
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: playground-caller-token
+  namespace: kai-agent
+  annotations:
+    kubernetes.io/service-account.name: playground-caller
+type: kubernetes.io/service-account-token

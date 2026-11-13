@@ -1,50 +1,15 @@
-# AI팀: kbl-maas 조회 전용 (LLMInferenceService 변경은 Git → Argo CD). ai-ops(kbl-ai-ops): 네임스페이스 관리자
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: kbl-ai-developer
-  namespace: kbl-maas
-rules:
-  - apiGroups: ["serving.kserve.io"]
-    resources: ["llminferenceservices", "llminferenceservices/status", "llminferenceserviceconfigs"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["maas.opendatahub.io"]
-    resources: ["maasmodelrefs"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["pods", "pods/log", "events", "services", "endpoints", "resourcequotas"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["apps"]
-    resources: ["deployments", "replicasets"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["gateway.networking.k8s.io"]
-    resources: ["httproutes"]
-    verbs: ["get", "list", "watch"]
----
+# AI 개발자(kbl-ai-developers): kbl-maas 조회 = 기본 view 롤 (LLMInferenceService 변경은 Git → Argo CD)
+# ai-ops 는 cluster-admin(ops/platform/rbac-ops.yaml), AI admin 은 클러스터 전체 view 라 여기서 따로 주지 않는다
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: kbl-ai-developer
-  namespace: kbl-maas
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: kbl-ai-developer
-subjects:
-  - apiGroup: rbac.authorization.k8s.io
-    kind: Group
-    name: kbl-ai-developers
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: kbl-ai-ops-admin
+  name: kbl-ai-developers-view
   namespace: kbl-maas
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: admin
+  name: view
 subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
-    name: kbl-ai-ops
+    name: kbl-ai-developers

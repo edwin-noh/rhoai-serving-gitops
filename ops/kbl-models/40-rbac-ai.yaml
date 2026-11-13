@@ -1,41 +1,18 @@
-# AI팀 권한: kbl-models 조회 전용. InferenceService 변경(파라미터 조정 포함)은 Git(ai/models) → Argo CD 로만 한다.
-# - 운영 중 추가 권한이 필요하면(예: 디버깅용 port-forward) 별도 Role 을 만들어 바인딩한다
-# - 기본 edit 롤을 쓰지 않는다. edit 는 Pod/Deployment 를 직접 만들 수 있어 승인되지 않은 이미지를 실행할 수 있고,
+# AI 개발자(kbl-ai-developers): kbl-models 조회 = 기본 view 롤 (Secret 제외 전부 조회, 프로젝트 목록에도 보인다)
+# - InferenceService 변경(파라미터 조정 포함)은 Git(ai/raw) → Argo CD 로만 한다
+# - edit 롤은 쓰지 않는다. edit 는 Pod/Deployment 를 직접 만들 수 있어 승인되지 않은 이미지를 실행할 수 있고,
 #   NetworkPolicy/Secret/ServiceAccount 도 바꿀 수 있다
-# - 그룹 이름은 사이트 값으로 바꾼다
+# - AI admin(kbl-ai-admins)은 클러스터 전체 view 가 있다 (ops/platform/rbac-ai.yaml)
 # - Argo CD 에서는 AppProject kbl-ai(ops/gitops/appprojects.yaml)의 role 로 앱 조회/Sync 만 할 수 있다
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: kbl-ai-developer
-  namespace: kbl-models
-rules:
-  - apiGroups: ["serving.kserve.io"]
-    resources: ["inferenceservices", "inferenceservices/status", "servingruntimes"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["pods", "pods/log", "events", "services", "endpoints", "resourcequotas"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["apps"]
-    resources: ["deployments", "replicasets"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["events.k8s.io"]
-    resources: ["events"]
-    verbs: ["get", "list", "watch"]
-  # 어떤 허용 대상이 열려 있는지 확인용
-  - apiGroups: ["networking.k8s.io"]
-    resources: ["networkpolicies"]
-    verbs: ["get", "list", "watch"]
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: kbl-ai-developer
+  name: kbl-ai-developers-view
   namespace: kbl-models
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: kbl-ai-developer
+  kind: ClusterRole
+  name: view
 subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group

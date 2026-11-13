@@ -12,8 +12,9 @@ platform/                          클러스터 설정 (Argo CD: kbl-ops-platfor
   hardwareprofile-gpu.yaml         HardwareProfile gpu-1x
   hardwareprofile-gpu-2x.yaml      HardwareProfile gpu-2x (tensor parallel)
   registry-ca.yaml                 Nexus CA (ConfigMap + image.config additionalTrustedCA)
-  rbac-ai.yaml                     AI팀 HardwareProfile 조회 권한 (redhat-ods-applications), 워크벤치 ClusterRole kbl-ai-workbench
-  rbac-self-provisioner.yaml       프로젝트 생성은 kbl-ai-ops, kbl-ai-admins 만 (OpenShift 기본 self-provisioners 덮어씀)
+  rbac-ai.yaml                     AI팀 HardwareProfile 조회 권한 (redhat-ods-applications), 워크벤치·playground ClusterRole, AI admin 클러스터 view
+  rbac-ops.yaml                    ai-ops(kbl-ai-ops) cluster-admin
+  rbac-self-provisioner.yaml       프로젝트 생성은 kbl-ai-admins 만 (ai-ops 는 cluster-admin) (OpenShift 기본 self-provisioners 덮어씀)
   mirror/imageset-config.yaml      oc-mirror 입력 파일 (동기화 대상 아님)
 kbl-models/                        모델 네임스페이스 (Argo CD: kbl-ops-kbl-models)
   00-namespace.yaml
@@ -22,9 +23,8 @@ kbl-models/                        모델 네임스페이스 (Argo CD: kbl-ops-k
   34-netpol-default-deny.yaml      모든 파드 in/out 기본 차단 (클러스터 밖 포함)
   35-netpol-egress.yaml            DNS, 같은 ns, API 서버(머신 네트워크 CIDR:6443)
   36-netpol-model-ingress.yaml     모델 8443 ← 같은 ns + kbl.io/model-consumer=true ns / 8080 ← 모니터링만
-  40-rbac-ai.yaml                  AI팀 조회 Role
-  41-rbac-ops.yaml                 Ops 네임스페이스 admin
-  42-rbac-ai-admin.yaml            AI admin(kbl-ai-admins) playground Role
+  40-rbac-ai.yaml                  AI 개발자 view (RoleBinding → ClusterRole view)
+  42-rbac-ai-admin.yaml            AI admin(kbl-ai-admins) playground (ClusterRole kbl-ai-playground)
   50-model-callers.yaml            Role model-caller, playground-caller SA·토큰
   network/allow-<ns>-<대상>.yaml   허용 대상별 NetworkPolicy, 접근 가능한 모델 목록 (AI팀 요청)
   runtimes/vllm-<등급>-<버전>.yaml

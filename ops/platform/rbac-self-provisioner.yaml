@@ -1,4 +1,4 @@
-# 프로젝트 자기 생성(self-provisioner)을 ai-ops 와 AI admin 으로 제한한다.
+# 프로젝트 자기 생성(self-provisioner)을 AI admin(kbl-ai-admins)으로 제한한다. ai-ops 는 cluster-admin 이라 따로 넣지 않는다
 # - OpenShift 기본 바인딩(같은 이름)은 system:authenticated:oauth(로그인한 모든 사용자)에게 준다.
 #   그러면 AI 개발자(kbl-ai-developers)도 프로젝트를 만들고, 그 안에서 Deployment/Pod 를 마음대로 띄울 수 있다
 #   (kbl-models 에서 edit 롤을 주지 않은 의도를 우회). AI 개발자는 지정 프로젝트(ops/consumers/)에서만 작업한다
@@ -17,9 +17,6 @@ roleRef:
   kind: ClusterRole
   name: self-provisioner
 subjects:
-  - apiGroup: rbac.authorization.k8s.io
-    kind: Group
-    name: kbl-ai-ops
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
     name: kbl-ai-admins

@@ -1,6 +1,6 @@
-# 에이전트팀용 예시 (Argo CD 가 동기화하지 않는다). 에이전트 네임스페이스(예: kbl-poc-agent)에 적용한다
+# 에이전트팀용 예시 (Argo CD 가 동기화하지 않는다). 에이전트 네임스페이스(예: kai-agent)에 적용한다
 # 전제: Ops 가 ops/consumers/<ns>.yaml 로 등록 (네트워크 라벨 + SA agent + kbl-models RoleBinding)
-#   oc apply -n kbl-poc-agent -f examples/agent-client.yaml
+#   oc apply -n kai-agent -f examples/agent-client.yaml
 ---
 # (선택) 에이전트 네임스페이스에 egress default-deny 가 있을 때만 필요
 apiVersion: networking.k8s.io/v1
@@ -38,7 +38,7 @@ spec:
         - {protocol: TCP, port: 443}
 ---
 # MaaS API 키 (Gen AI studio → API keys 에서 발급, sk-oai-...). Git 에 넣지 않는다
-# oc create secret generic maas-api-key -n kbl-poc-agent --from-literal=key=sk-oai-...
+# oc create secret generic maas-api-key -n kai-agent --from-literal=key=sk-oai-...
 ---
 apiVersion: batch/v1
 kind: Job

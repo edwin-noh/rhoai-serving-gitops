@@ -1,37 +1,14 @@
-# ai-ops(kbl-ai-ops)가 모델 격리 정책(ANP, EgressFirewall)과 RHOAI 설정을 조회할 수 있게 한다.
-# 변경은 Git(ops) → Argo CD 로만 한다 (Argo CD application controller 가 적용)
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: kbl-ai-ops-viewer
-rules:
-  - apiGroups: ["policy.networking.k8s.io"]
-    resources: ["adminnetworkpolicies", "baselineadminnetworkpolicies"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["k8s.ovn.org"]
-    resources: ["egressfirewalls"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["infrastructure.opendatahub.io"]
-    resources: ["hardwareprofiles"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["serving.kserve.io"]
-    resources: ["servingruntimes", "inferenceservices"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["user.openshift.io"]
-    resources: ["groups"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["namespaces"]
-    verbs: ["get", "list", "watch"]
----
+# ai-ops(kbl-ai-ops)는 클러스터 어드민 역할이다 → cluster-admin 하나로 준다 (네임스페이스별 RoleBinding 을 두지 않는다)
+# - 그래도 변경은 Git(ops) → Argo CD 로 한다. Argo 가 관리하는 리소스를 직접 바꾸면 selfHeal 이 되돌린다
+# - Argo CD 권한(AppProject roles)과 RHOAI 대시보드 adminGroups 는 Kubernetes RBAC 와 별개라 따로 둔다
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kbl-ai-ops-viewer
+  name: kbl-ai-ops-cluster-admin
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kbl-ai-ops-viewer
+  name: cluster-admin
 subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group

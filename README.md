@@ -33,15 +33,15 @@ ModelCar 이미지 빌드·검증 도구는 [model-lifecycle](https://github.com
 
 | 그룹 | 역할 | 권한 |
 |---|---|---|
-| `kbl-ai-developers` | AI 개발자 (에이전트 개발자) | kbl-models·kbl-maas 조회, Argo CD `kbl-ai` 앱 조회/Sync, 대시보드 `allowedGroups`, 지정 프로젝트(`kbl-poc-agent`)에서 워크벤치. **프로젝트 생성 불가** |
-| `kbl-ai-admins` | AI admin | AI 개발자 권한 + kbl-models 의 Gen AI playground (RHOAI 일부 edit, `ops/kbl-models/42-rbac-ai-admin.yaml`). `kbl-ai-developers` 에도 넣는다. 프로젝트 생성 가능 |
-| `kbl-ai-ops` | ai-ops (클러스터 어드민 역할) | `ops/` 관리, Argo CD `kbl-ops` 전체, kbl-models·kbl-maas admin, 격리 정책 조회, 대시보드 `adminGroups`, 프로젝트 생성 가능 |
+| `kbl-ai-developers` | AI 개발자 (에이전트 개발자) | 지정 프로젝트(`kai-agent`)에서 워크벤치·Gen AI playground, kbl-models·kbl-maas view, Argo CD `kbl-ai` 앱 조회/Sync, 대시보드 `allowedGroups`. **프로젝트 생성 불가** |
+| `kbl-ai-admins` | AI admin | 클러스터 전체 view, kbl-models 의 Gen AI playground (`ops/kbl-models/42-rbac-ai-admin.yaml`), 프로젝트 생성 가능. `kbl-ai-developers` 에도 넣는다 |
+| `kbl-ai-ops` | ai-ops (클러스터 어드민) | `cluster-admin`, `ops/` 관리, Argo CD `kbl-ops` 전체, 대시보드 `adminGroups` |
 
 | | Ops팀 (`kbl-ai-ops`) | AI팀 (`kbl-ai-developers`, `kbl-ai-admins`) |
 |---|---|---|
 | Git | `ops/` | `ai/` |
 | Argo CD | AppProject `kbl-ops` (클러스터 전체, MaaS 정책 포함) | AppProject `kbl-ai` (kbl-maas 의 LLMInferenceService, kbl-models 의 InferenceService 만) |
-| 클러스터 권한 | kbl-models admin + 격리 정책 조회 (변경은 Git→Argo CD) | Role `kbl-ai-developer`: kbl-models 조회 전용 (ISVC 변경은 Git→Argo CD). AI admin 은 playground Role 추가 |
+| 클러스터 권한 | `cluster-admin` (변경은 Git→Argo CD) | kbl-models·kbl-maas view + `kai-agent` 워크벤치·playground (ISVC 변경은 Git→Argo CD). AI admin 은 클러스터 view + kbl-models playground |
 | RHOAI 대시보드 | Auth `adminGroups` (kbl-ai-ops) | Auth `allowedGroups` (kbl-ai-developers) |
 | 사용자 | Group 멤버십 `ops/platform/groups.yaml` | |
 | Nexus | `vllm-*` push, `models-validated` push(승인자) | `models-community` push |
