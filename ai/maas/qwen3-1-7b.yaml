@@ -25,6 +25,16 @@ spec:
     # OpenAI API 의 model 이름
     name: qwen3-1-7b
   replicas: 1
+  # 분산 트레이싱 (llm-d 문서 17.12): EPP(scheduler)·vLLM 이 OTLP gRPC 로 span 을 보낸다
+  # - 받는 곳은 RHOAI 관측성 스택의 OTel collector(DSCI spec.monitoring.traces) → TempoMonolithic(redhat-ods-monitoring)
+  #   조회: 콘솔 Observe → Traces (tempo: redhat-ods-monitoring/data-science-tempomonolithic, tenant redhat-ods-monitoring)
+  # - kbl-maas egress 는 ops/kbl-maas/35-netpol-egress.yaml 에서 collector 4317 만 연다
+  # - 샘플링: 테스트 클러스터라 1.0(전부). 운영은 문서 권장 0.01~0.05
+  tracing:
+    exporter: otlp
+    exporterEndpoint: http://data-science-collector-collector.redhat-ods-monitoring.svc.cluster.local:4317
+    sampler: parentbased_traceidratio
+    samplerArg: "1.0"
   router:
     route: {}
     # MaaS gateway 에 붙인다 (MaaS 인증·토큰 한도가 이 gateway 에서 적용된다)

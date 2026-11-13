@@ -1,4 +1,5 @@
-# kbl-maas 에서 나갈 수 있는 곳 (모든 파드): DNS, 같은 네임스페이스(EPP → vLLM), API 서버 6443(EPP 가 파드·InferencePool 조회)
+# kbl-maas 에서 나갈 수 있는 곳 (모든 파드): DNS, 같은 네임스페이스(EPP → vLLM), API 서버 6443(EPP 가 파드·InferencePool 조회),
+# trace 전송(EPP·vLLM → RHOAI 관측성 스택 OTel collector 4317/OTLP gRPC. LLMInferenceService spec.tracing)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -23,3 +24,13 @@ spec:
             cidr: 192.168.31.0/24     # 사이트 값 (machineNetwork)
       ports:
         - {protocol: TCP, port: 6443}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: redhat-ods-monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: opentelemetry-collector
+              app.kubernetes.io/instance: redhat-ods-monitoring.data-science-collector
+      ports:
+        - {protocol: TCP, port: 4317}

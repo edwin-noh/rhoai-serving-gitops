@@ -1,0 +1,63 @@
+# 모델 서빙 알림 (User Workload Monitoring 이 평가 → 플랫폼 Alertmanager, 콘솔 Observe → Alerting)
+# - UWM 규칙은 이 네임스페이스(kbl-models) 메트릭만 본다 (namespace 라벨이 자동으로 붙는다). 같은 규칙을 kbl-maas / kbl-models 에 각각 둔다
+# - vllm:* 는 vLLM 원본 메트릭 (raw: ServiceMonitor <isvc>-metrics, llm-d: PodMonitor kserve-llm-isvc-vllm-engine-default)
+# - 임계값은 테스트 클러스터 초기값이다. 운영 SLO 가 정해지면 바꾼다
+#   TTFT P90 2s / 오류율 5% / 대기 요청 5개(max-num-seqs 16 기준) / KV cache 90%
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kbl-llm-serving-alerts
+  namespace: kbl-models
+spec:
+  groups:
+    - name: kbl-llm-serving
+      rules:
+        - alert: KblLlmMetricsDown
+          # 메트릭을 못 가져오면 나머지 알림도 동작하지 않으므로 먼저 본다
+          expr: up{job=~".+-metrics"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "모델 메트릭 수집 실패: {{ $labels.pod }}"
+            description: "{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.job }}) 의 /metrics 를 5분 넘게 가져오지 못했다. 파드 상태와 NetworkPolicy 를 확인한다."
+        - alert: KblLlmTtftP90High
+          # 트래픽이 거의 없을 때(0.01 req/s 미만)는 분위수가 의미 없으므로 제외한다
+          expr: |
+            histogram_quantile(0.90, sum by (le, model_name) (rate(vllm:time_to_first_token_seconds_bucket[5m]))) > 2
+            and on (model_name)
+            sum by (model_name) (rate(vllm:time_to_first_token_seconds_count[5m])) > 0.01
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "TTFT P90 2초 초과: {{ $labels.model_name }}"
+            description: "{{ $labels.namespace }}/{{ $labels.model_name }} 의 첫 토큰 응답시간 P90 이 {{ $value | humanizeDuration }} 이다 (기준 2s, 10분 지속)."
+        - alert: KblLlmRequestErrorRateHigh
+          # finished_reason=error 만 센다. abort 는 클라이언트 취소(연결 끊김)도 포함하므로 오류로 보지 않는다
+          expr: |
+            sum by (model_name) (rate(vllm:request_success_total{finished_reason="error"}[10m]))
+            /
+            sum by (model_name) (rate(vllm:request_success_total[10m])) > 0.05
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "요청 오류율 5% 초과: {{ $labels.model_name }}"
+            description: "{{ $labels.namespace }}/{{ $labels.model_name }} 의 오류 종료 비율이 {{ $value | humanizePercentage }} 이다 (10분 지속)."
+        - alert: KblLlmQueueBacklog
+          expr: max by (model_name) (vllm:num_requests_waiting) > 5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "대기 요청 누적: {{ $labels.model_name }}"
+            description: "{{ $labels.namespace }}/{{ $labels.model_name }} 의 대기 요청이 {{ $value }} 개다 (5분 지속). 동시 처리 한도(max-num-seqs)나 replica 를 검토한다."
+        - alert: KblLlmKvCacheSaturated
+          expr: max by (model_name) (vllm:kv_cache_usage_perc) > 0.9
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "KV cache 90% 초과: {{ $labels.model_name }}"
+            description: "{{ $labels.namespace }}/{{ $labels.model_name }} 의 KV cache 사용률이 {{ $value | humanizePercentage }} 이다 (15분 지속). 선점(preemption)과 지연이 늘 수 있다."
