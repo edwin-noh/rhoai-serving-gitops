@@ -1,7 +1,7 @@
 # 모델 호출자(에이전트 네임스페이스) 등록
 
 `kbl-models` 의 InferenceService 는 토큰 인증이 필수다. 호출하려면 **네트워크**와 **토큰 권한**이 모두 필요하고,
-이 폴더의 파일 하나(`<에이전트 ns>.yaml`)가 둘을 함께 연다. Argo CD 앱: `../gitops/apps/12-kbl-ops-consumers.yaml`.
+이 폴더의 파일 하나(`<에이전트 ns>.yaml`)가 둘을 함께 연다. Argo CD 앱: `../gitops/apps/12-kbl-ops-agent.yaml`.
 
 | 항목 | 리소스 | 효과 |
 |---|---|---|
@@ -14,7 +14,7 @@ MaaS(llm-d) 모델은 Kubernetes RBAC 를 쓰지 않는다 — `../maas-policy/`
 
 ## 등록
 1. `kai-agent.yaml` 을 복사해 `<에이전트 ns>.yaml` 로 저장하고 네임스페이스·SA 이름을 바꾼다
-2. 커밋 → `kbl-ops-consumers` 앱이 동기화
+2. 커밋 → `kbl-ops-agent` 앱이 동기화
 3. 확인
    ```bash
    oc get ns <에이전트 ns> -L kblife.co.kr/model-consumer

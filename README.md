@@ -4,27 +4,18 @@ RHOAI 3.5 위에서 LLM 을 **두 가지 방식(KServe RawDeployment, llm-d + Ma
 운영팀(ai-ops)·AI admin·AI 개발자(에이전트 개발자)가 각자 무엇을 하고, 모델을 어떻게 호출하며,
 무엇을 바꾸면 배포된 모델에 어떤 일이 일어나는지 설명한다.
 
-- 모델 이미지(ModelCar) 빌드·검증 도구는 [model-lifecycle](https://github.com/edwin-noh/model-lifecycle) 리포에 있다
-- PoC(클러스터 rhoai-35, 리포 `rhoai-serving-gitops`, 브랜치 `main`)에서 검증했다.
-  표기: **PoC 확인** = 실제 동작 확인, **추정** = 동작 원리상 예상(미검증), **3.5 미확인** = RHOAI 3.5 문서에 근거 없음
-- 나중에 리포를 나눌 때는 `ops/`, `ai/` 를 각각 리포로 옮기고 Argo CD 의 `repoURL`/`path`/`sourceRepos` 만 바꾼다
-
-> **PoC 클러스터 현재 상태**: GPU 1장(RTX 3060 12GB)을 **time-slicing 으로 2개**로 나눠(openshift-cluster-gitops gpu-operator
-> overlay `time-sliced-2`) 소형 모델 `qwen3-1-7b` 를 **Raw 와 MaaS 로 동시에** 서빙한다 (파드당 `--gpu-memory-utilization=0.45`).
-> `qwen3-4b-instruct` 는 Raw 쪽은 `serving.kserve.io/stop` 으로 정지, MaaS 쪽은 전체 주석(보관본)이다. KB Life 에서는 모델마다 GPU 를 따로 쓴다.
-
 ---
 
 ## 1. 한 장 요약
 
 | 원칙 | 의미 | 왜 |
 |---|---|---|
-| **Git 이 유일한 변경 경로** | 사람은 Git 에 커밋하고, 클러스터 반영은 Argo CD 만 한다 | 변경 이력·리뷰·롤백이 Git 에 남는다. 손으로 바꾼 것은 Argo CD 가 되돌린다(selfHeal) |
-| **폴더 = 책임** | `ops/` 는 운영팀(ai-ops), `ai/` 는 AI팀 | 누가 무엇을 바꿀 수 있는지 폴더만 보면 안다 |
-| **이중 가드** | Argo CD AppProject 가 AI팀 폴더의 허용 리소스를 제한 + 클러스터 RBAC 는 AI팀에 조회(view)만 | AI팀이 네트워크·권한·런타임을 바꿀 수 없다 |
-| **두 서빙 경로, 용도로 구분** | **Raw**: 클러스터 안 에이전트 전용, SA 토큰 / **MaaS**: 클러스터 안팎, API 키 + 토큰 한도 | 내부 호출은 단순·저지연으로, 사용자·외부 호출은 사용량 통제와 함께 |
+| **Git 이 유일한 변경 경로** | 변경 사항을 Git 에 커밋하고, 클러스터 반영은 Argo CD 만 한다 | 변경 이력·리뷰·롤백이 Git 에 남는다. 오픈시프트에서 직접 바꾼 것은 Argo CD 가 되돌린다(selfHeal) |
+| **폴더(또는 repo) = 책임** | `ops/` 는 운영팀(ai-ops), `ai/` 는 AI팀 | 역할에 따라 폴더(repo) 구분 |
+| **ArgoCD 권한 제어** | Argo CD AppProject가 AI팀 폴더의 허용 리소스를 제한 + 클러스터 RBAC은 AI팀에 조회(view)만 | AI팀이 네트워크·권한·런타임을 바꿀 수 없음 |
+| **용도로 서빙 방식 구분** | **Raw**: 클러스터 안 에이전트 전용, SA 토큰 / **MaaS**: 클러스터 안팎, API 키 + 토큰 한도 | 내부 호출은 단순·저지연으로, 사용자·외부 호출은 사용량 통제와 함께 |
 | **이름·digest 고정** | 런타임 `vllm-<등급>-<버전>`, 이미지·모델은 `@sha256:` | 무엇이 떠 있는지 정확히 식별, 검사한 이미지 그대로 배포 |
-| **모델 접근은 정책으로** | Raw: 호출자 등록(`ops/consumers`) / MaaS: 그룹별 구독·인가(`ops/maas-policy`) | "누가 어떤 모델을 얼마나" 를 운영팀이 Git 으로 관리 |
+| **모델 접근은 정책으로** | Raw: 호출자 등록(`ops/agent`) / MaaS: 그룹별 구독·인가(`ops/maas-policy`) | "누가 어떤 모델을 얼마나" 를 운영팀이 Git 으로 관리 |
 
 ---
 
@@ -68,7 +59,7 @@ rhoai-serving-gitops/
 │   ├── gitops/                 Argo CD AppProject · app-of-apps (apps/)
 │   ├── platform/               클러스터 범위: Group(사용자), RBAC(cluster-admin·view·워크벤치·playground 롤, 프로젝트 생성 제한), HardwareProfile
 │   ├── kbl-models/             Raw 네임스페이스: NetworkPolicy 3개, RBAC(AI 개발자 view·AI admin playground), ServingRuntime, 호출 Role
-│   ├── consumers/              에이전트 네임스페이스 등록(호출 권한 + 워크벤치) — 네임스페이스 하나 = 파일 하나
+│   ├── agent/                  에이전트 네임스페이스 등록(호출 권한 + 워크벤치) — 네임스페이스 하나 = 파일 하나
 │   ├── kbl-maas/               MaaS 네임스페이스: 격리, RBAC, vLLM 런타임(LLMInferenceServiceConfig), MaaS 게시(MaaSModelRef)
 │   ├── maas-policy/            MaaS 인가(MaaSAuthPolicy)·토큰 한도(MaaSSubscription), 테넌트 설정(MaasTenantConfig, 비활성)
 │   ├── mig/                    GPU MIG 구성 (비활성, 구조만)
@@ -86,7 +77,7 @@ rhoai-serving-gitops/
 | `kbl-ops-mig` | 0 | kbl-ops | `ops/mig` | 수동 | 비활성(주석) |
 | `kbl-ops-kbl-models` | 1 | kbl-ops | `ops/kbl-models` | 자동, selfHeal, prune 끔 | 활성 |
 | `kbl-ops-kbl-maas` | 1 | kbl-ops | `ops/kbl-maas` | 자동, selfHeal, prune 끔 | 활성 |
-| `kbl-ops-consumers` | 1 | kbl-ops | `ops/consumers` | 자동, selfHeal, prune 끔 | 활성 |
+| `kbl-ops-agent` | 1 | kbl-ops | `ops/agent` | 자동, selfHeal, prune 끔 | 활성 |
 | `kbl-ai-raw` | 2 | kbl-ai | `ai/raw` | 자동, selfHeal, **prune 켬** (파일 삭제 = 모델 내림) | 활성 |
 | `kbl-ai-maas` | 2 | kbl-ai | `ai/maas` | 자동, selfHeal, **prune 켬** | 활성 |
 | `kbl-ops-maas-policy` | 3 | kbl-ops | `ops/maas-policy` | 자동, selfHeal, prune 켬 | 활성 |
@@ -133,7 +124,7 @@ AI팀이 ISVC 를 직접 수정하므로, ISVC 에서 쓰지 않을 필드(`mode
 | vLLM 런타임 (Ops) | `ServingRuntime` `ops/kbl-models/runtimes/vllm-ga-3-5-2.yaml` | `LLMInferenceServiceConfig` `ops/kbl-maas/runtimes/vllm-ga-3-5-2.yaml` (같은 이미지 digest) |
 | 호출 주소 | `https://<모델>-predictor.kbl-models.svc:8443/v1` | `https://maas.<apps 도메인>/v1` |
 | 인증 | Kubernetes SA 토큰 (kube-rbac-proxy) | MaaS API 키 `sk-oai-…` (Authorino) |
-| 인가 | `ops/consumers/<ns>.yaml` → Role `model-caller` | `ops/maas-policy/authpolicy-*.yaml` (그룹) |
+| 인가 | `ops/agent/<ns>.yaml` → Role `model-caller` | `ops/maas-policy/authpolicy-*.yaml` (그룹) |
 | 사용량 제한 | 없음 | `ops/maas-policy/subscription-*.yaml` 토큰 한도 (사용자별) |
 | 클러스터 밖 호출 | 불가 (Route 없음) | 가능 |
 | 근거 | 대시보드에 "Legacy deployment" 로 표시되지만 지원 (Release notes RHOAIENG-85220), 토큰 인증: Deploying models §2.9 | MaaS 는 LLMInferenceService 만 지원 (Govern LLM access with MaaS §1.10) |
@@ -265,7 +256,7 @@ oc logs -n kbl-maas deploy/<모델>-kserve -c main | grep 'vllm version'
 | 출발 | 8443 (토큰 인증 프록시) | 8080 (vLLM 직결) |
 |---|---|---|
 | 같은 네임스페이스 (Gen AI playground 등) | ✅ 토큰 필요 (playground 는 `playground-caller` 토큰) | ❌ |
-| Ops 가 등록한 네임스페이스 (`kblife.co.kr/model-consumer=true`) | ✅ 토큰 필요 (`ops/consumers/<ns>.yaml`) | ❌ |
+| Ops 가 등록한 네임스페이스 (`kblife.co.kr/model-consumer=true`) | ✅ 토큰 필요 (`ops/agent/<ns>.yaml`) | ❌ |
 | `openshift-user-workload-monitoring` | — | ✅ 메트릭 |
 | 그 외 네임스페이스, 클러스터 밖 | ❌ | ❌ |
 
@@ -336,7 +327,7 @@ flowchart LR
 | | ① Raw 모델 호출 | ② MaaS 모델 호출 (클러스터 안에서) |
 |---|---|---|
 | 주소 | `https://<모델>-predictor.kbl-models.svc:8443/v1` | `https://maas.<apps 도메인>/v1` |
-| 운영팀 사전 작업 | `ops/consumers/<에이전트 ns>.yaml` (ns 라벨 + SA + RoleBinding) | 사용자 그룹에 `MaaSSubscription` + `MaaSAuthPolicy` |
+| 운영팀 사전 작업 | `ops/agent/<에이전트 ns>.yaml` (ns 라벨 + SA + RoleBinding) | 사용자 그룹에 `MaaSSubscription` + `MaaSAuthPolicy` |
 | 에이전트 쪽 준비 | 없음 — 파드에 자동 마운트되는 **자기 SA 토큰**을 쓴다 (그 ns 의 모든 SA 에 호출 권한) | API 키 (Gen AI studio → API keys) 를 Secret 으로 |
 | 인증 헤더 | `Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)` | `Authorization: Bearer sk-oai-…` |
 | TLS | OpenShift service CA (ConfigMap `openshift-service-ca.crt`, 모든 ns 에 자동 생성) | router 인증서 (사내 CA) |
@@ -482,7 +473,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 | `MaaSSubscription` 한도 변경 | 재기동 없음. Kuadrant TokenRateLimitPolicy 갱신, 약 1분 내 반영 (PoC 확인: 2000 → 20000) |
 | `MaaSAuthPolicy` 그룹 변경 | 재기동 없음. Authorino 캐시(60초) 후 반영 |
 | `MaaSModelRef` 삭제 | MaaS 에서 모델 비공개 (파드는 계속 실행) |
-| `ops/consumers/<ns>.yaml` 삭제 + RoleBinding 삭제 | 그 에이전트의 Raw 호출 즉시 403 (프록시가 매 요청 권한 확인) |
+| `ops/agent/<ns>.yaml` 삭제 + RoleBinding 삭제 | 그 에이전트의 Raw 호출 즉시 403 (프록시가 매 요청 권한 확인) |
 | NetworkPolicy | 재기동 없음, 즉시 반영 |
 | GPU time-slicing / MIG 구성 | 노드 GPU 재구성 → 해당 노드 모델 중단 가능 (`ops/mig/README.md` 절차) |
 
@@ -517,7 +508,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 | 요청 | 요청자 → 처리 | 파일 |
 |---|---|---|
 | 새 vLLM 버전 | AI → Ops | Raw: `ops/kbl-models/runtimes/` / MaaS: `ops/kbl-maas/runtimes/` 에 새 파일 → AI 가 `runtime`/`baseRefs` 변경 |
-| 에이전트 ns 등록 (Raw 호출 + 워크벤치) | 에이전트팀 → Ops | `ops/consumers/<ns>.yaml` ([절차](ops/consumers/README.md)) |
+| 에이전트 ns 등록 (Raw 호출 + 워크벤치) | 에이전트팀 → Ops | `ops/agent/<ns>.yaml` ([절차](ops/agent/README.md)) |
 | 모델 MaaS 공개 | AI → Ops | `ops/kbl-maas/maas/<모델>.yaml` + `ops/maas-policy/` (한 커밋) |
 | 토큰 한도 변경 / 사용 그룹 추가 | 사용자·AI → Ops | `ops/maas-policy/subscription-*.yaml`, `authpolicy-*.yaml` |
 | 사용자 추가 | → Ops | `ops/platform/groups.yaml` (KB Life: AD 그룹) |
@@ -533,7 +524,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 | 증상 | Raw | MaaS |
 |---|---|---|
 | 401 | SA 토큰 없음/만료 | API 키 없음/만료/revoke |
-| 403 | 호출자 ns 미등록 (`ops/consumers`) | AuthPolicy 에 그룹 없음 |
+| 403 | 호출자 ns 미등록 (`ops/agent`) | AuthPolicy 에 그룹 없음 |
 | 404 | 경로 오류 | body `model` 이 `/v1/models` id 가 아님 |
 | 429 | — | 토큰 한도 초과, 또는 Subscription 없음 |
 | 400 `invalid_subscription` (키 발급) | — | 사용자 그룹에 Subscription 없음 |
@@ -577,7 +568,7 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 
 - [ai/README.md](ai/README.md) — AI팀 작업 규칙 (Raw·MaaS), 모니터링
 - [ops/README.md](ops/README.md) — 운영팀 작업 (설치, 런타임 추가, MaaS 운영, 에이전트 ns 등록)
-- [ops/consumers/README.md](ops/consumers/README.md) — 에이전트 ns 등록·해지, 워크벤치 프로젝트
+- [ops/agent/README.md](ops/agent/README.md) — 에이전트 ns 등록·해지, 워크벤치 프로젝트
 - [ops/network-isolation/README.md](ops/network-isolation/README.md) — 네트워크 격리
 - [ops/mig/README.md](ops/mig/README.md) — MIG 구성·변경 절차
 - [examples/README.md](examples/README.md) — 에이전트 호출 예시
