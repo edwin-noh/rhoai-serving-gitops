@@ -123,3 +123,19 @@ oc logs -n kbl-maas deploy/<모델>-kserve -c main | grep 'vllm version'   # vLL
   - 토큰: `oc get secret playground-caller-token -n kbl-models -o jsonpath='{.data.token}' | base64 -d`
 - 대시보드의 "Add as AI asset endpoint" 는 ISVC 에 Git 에 없는 라벨(`opendatahub.io/genai-asset`)을 붙이고 모델 파드를 재기동시킨다.
   계속 쓰려면 그 라벨을 `raw/<모델>.yaml` 에 넣는다
+
+## 모니터링
+
+| 화면 | AI 개발자·AI admin | 비고 |
+|---|---|---|
+| RHOAI 대시보드 Observe & monitor → **Models** 탭 | 보임 | 접근 가능한 프로젝트(kbl-models)의 ISVC 메트릭 |
+| Observe & monitor → **LLM Traffic / Performance / Utilization**, **Usage**, **Cluster** 탭 | 안 보임 (클러스터 관리자만) | RHOAI 3.5.3 operator 가 이 탭들의 대시보드를 관리자용(`*-admin`, 클러스터 전체 메트릭)으로만 배포한다. RBAC 로 열 수 없다 |
+| OpenShift 콘솔 Observe → **Metrics** (프로젝트 kbl-maas / kbl-models) | 보임 | user workload monitoring 이 수집한 메트릭을 네임스페이스 범위로 조회 (`view` 권한) |
+
+llm-d(kbl-maas) 메트릭은 OpenShift 콘솔에서 프로젝트 `kbl-maas` 를 고르고 쿼리한다 (PodMonitor `kserve-llm-isvc-vllm-engine`, ServiceMonitor `kserve-llm-isvc-scheduler` 가 수집):
+
+```promql
+vllm:num_requests_running                                                       # 처리 중인 요청 수
+histogram_quantile(0.95, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket[5m])))   # p95 지연
+rate(vllm:generation_tokens_total[5m])                                          # 초당 생성 토큰
+```
