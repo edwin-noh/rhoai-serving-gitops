@@ -33,8 +33,8 @@
 | `opendatahub.io/template-name` | annotation | `vllm-cuda-runtime-template` | **문서(예시)** Enabling AI safety with guardrails §4.3 / **관찰** 대시보드가 만든 런타임에 붙음 | 어떤 템플릿에서 나온 런타임인지. 대시보드가 템플릿과 연결할 때 사용 |
 | `opendatahub.io/template-display-name` | annotation | `vLLM NVIDIA GPU ServingRuntime for KServe` | **관찰** 대시보드가 만든 런타임에 붙음 | 템플릿 표시 이름 |
 | `spec.annotations.prometheus.io/path`, `prometheus.io/port` | (spec 의 annotation) | `/metrics`, `"8080"` | **문서** §1.2.1 "The endpoint/port used by Prometheus to scrape metrics" | 예측 파드에 전달되어 메트릭 수집 대상이 됨 |
-| `kbl.io/runtime-tier` | label | `ga` / `fast` / `upstream` | **자체** | 등급 표시. `oc get servingruntime -L kbl.io/runtime-tier`, PR 리뷰 |
-| `kbl.io/support-status` | annotation | `supported` / `unsupported` | **자체** — ⚠ 공식 `opendatahub.io/support-status` 와 중복 (아래 권고) | 지금은 표시용일 뿐 대시보드 노출을 막지 않는다 |
+| `kblife.co.kr/runtime-tier` | label | `ga` / `fast` / `community` | **자체** | 등급 표시. `oc get servingruntime -L kblife.co.kr/runtime-tier`, PR 리뷰 |
+| `kblife.co.kr/support-status` | annotation | `supported` / `unsupported` | **자체** — ⚠ 공식 `opendatahub.io/support-status` 와 중복 (아래 권고) | 지금은 표시용일 뿐 대시보드 노출을 막지 않는다 |
 
 ## 2. InferenceService (`ai/raw/qwen3-4b-instruct.yaml`)
 
@@ -48,7 +48,7 @@
 | `opendatahub.io/hardware-profile-namespace` | annotation | `redhat-ods-applications` | **관찰** (위와 같음) | 프로파일이 있는 네임스페이스 |
 | `opendatahub.io/model-type` | annotation | `generative` | **관찰** 대시보드가 만든 ISVC, 템플릿 metadata(`["generative"]`) | 대시보드의 생성형/예측형 구분(Gen AI 기능 노출 등) |
 | `security.opendatahub.io/enable-auth` | annotation | `"false"` | **문서**는 LLMInferenceService(llm-d 5장)·Guardrails 용. ISVC 는 대시보드 "Require token authentication" 체크박스로만 설명(Deploying models §2.9) / **관찰** 대시보드가 ISVC 에 이 키를 씀 | `true` 면 인증 프록시 사이드카. 네트워크 격리(SA 토큰 미마운트)와 충돌해 우리는 `false` |
-| `kbl.io/runtime-tier`, `kbl.io/model-source` | label | `ga`, `validated` | **자체** | 등급·출처 표시, 카탈로그, PR 리뷰 (`storageUri` repo 와 맞는지) |
+| `kblife.co.kr/runtime-tier`, `kblife.co.kr/model-source` | label | `ga`, `validated` | **자체** | 등급·출처 표시, 카탈로그, PR 리뷰 (`storageUri` repo 와 맞는지) |
 
 대시보드가 ISVC 에 쓰지만 우리가 **일부러 쓰지 않는 것** (관찰, model-hub 의 대시보드 배포 기준):
 
@@ -69,7 +69,7 @@
 | `opendatahub.io/dashboard` | label | `"true"` | **문서(예시)** (llm-d 19.1.1 은 토큰용 Role/Secret 에) / ISVC 와 같은 관례 | 대시보드 표시 |
 | `openshift.io/display-name`, `openshift.io/description` | annotation | | ISVC 와 같음 | 대시보드 표시 |
 | `security.opendatahub.io/enable-auth` | annotation | **미지정** | **문서** llm-d 5장 "Authentication is enabled by default. Only an explicit `"false"` disables" | MaaS 모델은 인증 필수 → 쓰지 않거나 `"true"`. `"false"` 금지 |
-| `kbl.io/runtime-tier`, `kbl.io/model-source` | label | | **자체** | |
+| `kblife.co.kr/runtime-tier`, `kblife.co.kr/model-source` | label | | **자체** | |
 
 참고 (우리는 쓰지 않음, 문서에 있는 것):
 - `serving.kserve.io/stop` — 정지 (llm-d §6.4)
@@ -85,7 +85,7 @@
 | `opendatahub.io/support-status`, `unsupported-status-accepted`, `opendatahub.io/fast-version` | annotation | **문서** Configuring §1.4, §2.6 (LLMInferenceServiceConfig 에도 적용) | 제한 지원 config 노출 제어. 우리 GA config 에는 불필요 |
 | `opendatahub.io/config-type` | label | **문서** llm-d §2.8 (`workload-single-node`, `router` …) | 대시보드 topology/router 분류. 우리 config 에는 없음 — 대시보드 선택지에 노출하려면 추가 검토 |
 | `serving.kserve.io/well-known-config` | annotation | **관찰** 플랫폼 기본 config 에만 | 플랫폼 기본 config 표시. 우리는 쓰지 않음 |
-| `kbl.io/runtime-tier` | label | **자체** | |
+| `kblife.co.kr/runtime-tier` | label | **자체** | |
 
 ## 5. MaaSModelRef / Namespace / Argo CD
 
@@ -102,10 +102,10 @@
 
 ## 권고 (이번 정리에서 나온 것)
 
-1. **upstream 런타임**(`vllm-upstream-0-28-0.yaml`): `kbl.io/support-status: unsupported` 대신(또는 함께) 공식
+1. **community 런타임**(`vllm-community-0-28-0.yaml`): `kblife.co.kr/support-status: unsupported` 대신(또는 함께) 공식
    `opendatahub.io/support-status: unsupported` + `opendatahub.io/unsupported-status-accepted: "true"` 를 쓴다.
    그래야 대시보드에서 제한 지원 런타임으로 표시되고, 수락 없이 쓰이지 않는다 (Configuring §1.4). GA 런타임은 둘 다 생략(=supported).
-2. `kbl.io/*` 는 컨트롤러가 읽지 않는다. 등급 보장은 Nexus push 권한과 PR 리뷰로 한다 (README.md).
+2. `kblife.co.kr/*` 는 컨트롤러가 읽지 않는다. 등급 보장은 Nexus push 권한과 PR 리뷰로 한다 (README.md).
 3. **관찰** 등급 키(`hardware-profile-*`, `model-type`, `apiProtocol`, `runtime-version`, `template-*`, `gateway-access`)는
    문서가 보장하지 않는다. RHOAI 업그레이드 때 대시보드로 모델을 하나 만들어 붙는 키를 다시 비교한다:
    ```bash

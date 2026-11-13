@@ -10,7 +10,7 @@ metadata:
     opendatahub.io/runtime-version: v0.24.0
     openshift.io/display-name: vLLM 0.24.0 (RHAIIS 3.5.2, GA)
   labels:
-    kbl.io/runtime-tier: ga
+    kblife.co.kr/runtime-tier: ga
 spec:
   template:
     containers:

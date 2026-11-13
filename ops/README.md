@@ -22,7 +22,7 @@ kbl-models/                        모델 네임스페이스 (Argo CD: kbl-ops-k
   30-serviceaccount.yaml           model-serving (모델 파드 SA, 토큰은 인증 프록시용)
   34-netpol-default-deny.yaml      모든 파드 in/out 기본 차단 (클러스터 밖 포함)
   35-netpol-egress.yaml            DNS, 같은 ns, API 서버(머신 네트워크 CIDR:6443)
-  36-netpol-model-ingress.yaml     모델 8443 ← 같은 ns + kbl.io/model-consumer=true ns / 8080 ← 모니터링만
+  36-netpol-ingress.yaml           모델 8443 ← 같은 ns + kblife.co.kr/model-consumer=true ns / 8080 ← 모니터링만
   40-rbac-ai.yaml                  AI 개발자 view (RoleBinding → ClusterRole view)
   42-rbac-ai-admin.yaml            AI admin(kbl-ai-admins) playground (ClusterRole kbl-ai-playground)
   50-model-callers.yaml            Role model-caller, playground-caller SA·토큰
@@ -109,8 +109,8 @@ skopeo copy --all docker://registry.redhat.io/rhaiis/vllm-cuda-rhel9@sha256:<dig
 ```
 
 - 이름에 버전을 넣으므로 여러 버전이 같이 있어도 되고, 새 런타임을 추가해도 기존 모델은 재시작되지 않습니다
-- `support-status`: ga=`supported`, fast=`limited`, upstream=`unsupported`
-- upstream(커뮤니티 vLLM) 런타임은 `runtimes/vllm-upstream-0-28-0.yaml` 을 기준으로 만듭니다. 임의 UID 대응
+- `support-status`: ga=`supported`, fast=`limited`, community=`unsupported`
+- community(커뮤니티 vLLM) 런타임은 `runtimes/vllm-community-0-28-0.yaml` 을 기준으로 만듭니다. 임의 UID 대응
   (`HOME`/`XDG_CACHE_HOME`/`HF_HOME` → `/tmp`), `/dev/shm`, `autoSelect: false` 가 GA 런타임과 다릅니다.
   노드 NVIDIA 드라이버가 이미지의 CUDA 버전을 지원하는지 먼저 확인합니다
 - 모든 런타임에 `/dev/shm`(Memory emptyDir)을 둡니다. AI팀이 어떤 HardwareProfile(gpu-2x 의 tensor parallel 포함)과
@@ -125,7 +125,7 @@ skopeo copy --all docker://registry.redhat.io/rhaiis/vllm-cuda-rhel9@sha256:<dig
 
 ### 에이전트 네임스페이스 등록
 
-호출자 하나 = `consumers/<에이전트 ns>.yaml` 파일 하나 (네트워크 라벨 `kbl.io/model-consumer=true` + 호출 SA + `kbl-models` RoleBinding).
+호출자 하나 = `consumers/<에이전트 ns>.yaml` 파일 하나 (네트워크 라벨 `kblife.co.kr/model-consumer=true` + 호출 SA + `kbl-models` RoleBinding).
 절차·해지: [consumers/README.md](consumers/README.md). 에이전트팀 클라이언트 예시: [../examples/agent-client.yaml](../examples/agent-client.yaml)
 
 - ISVC 는 토큰 인증 필수 — 에이전트는 `https://<모델>-predictor.kbl-models.svc:8443` 에 SA 토큰으로 호출한다
@@ -141,7 +141,7 @@ kbl-models 전체 상한은 `10-resourcequota.yaml`. 롤링 업데이트 중에�
 ```bash
 oc get isvc,servingruntime,pods -n kbl-models
 oc describe quota -n kbl-models
-oc get isvc -n kbl-models -L kbl.io/runtime-tier,kbl.io/model-source
+oc get isvc -n kbl-models -L kblife.co.kr/runtime-tier,kblife.co.kr/model-source
 ops/network-isolation/verify.sh kbl-models qwen3-4b-instruct huggingface.co:443:deny
 ```
 
@@ -158,7 +158,7 @@ ops/network-isolation/verify.sh kbl-models qwen3-4b-instruct huggingface.co:443:
 - 모델 공개 = `MaaSModelRef` + `MaaSSubscription` + `MaaSAuthPolicy` 를 **한 커밋**으로 (AuthPolicy 만 있으면 429, Subscription 만 있으면 403)
 - API 키는 GitOps 밖(대시보드 Gen AI studio → API keys / maas-api)에서 발급된다. 키는 발급 시점의 그룹을 기억하므로
   사용자를 그룹에서 빼면 키도 revoke 한다
-- 런타임 버전 조회: `oc get llminferenceserviceconfig -A -L kbl.io/runtime-tier -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,VLLM:.metadata.annotations.opendatahub\.io/runtime-version`
+- 런타임 버전 조회: `oc get llminferenceserviceconfig -A -L kblife.co.kr/runtime-tier -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,VLLM:.metadata.annotations.opendatahub\.io/runtime-version`
 
 ## MIG
 

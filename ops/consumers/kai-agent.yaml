@@ -10,7 +10,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: Delete=false,Prune=false
   labels:
-    kbl.io/model-consumer: "true"
+    kblife.co.kr/model-consumer: "true"
     # RHOAI 대시보드 Projects 목록에 표시 (워크벤치 프로젝트)
     opendatahub.io/dashboard: "true"
 ---

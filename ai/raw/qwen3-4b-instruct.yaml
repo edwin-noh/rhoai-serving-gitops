@@ -4,7 +4,7 @@
 # - 이미지는 hf-modelcar 로 만들어 Nexus models-<출처> repo 에 push 한다. --push 후 출력되는 digest 를
 #   storageUri 에 쓰면 반입 심사한 내용과 정확히 일치시킬 수 있다 (태그는 바뀔 수 있음)
 # - 노드(kubelet)가 이미지를 받으므로 파드에 모델 다운로드용 egress 가 필요 없다
-# - 등급 승격/변경 시 kbl.io/runtime-tier 와 runtime 을 함께 바꾼다
+# - 등급 승격/변경 시 kblife.co.kr/runtime-tier 와 runtime 을 함께 바꾼다
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
@@ -25,8 +25,8 @@ metadata:
     # (ops/kbl-models/50-model-callers.yaml). 프록시가 API 서버를 호출하므로 아래 automountServiceAccountToken: true 가 필요
     security.opendatahub.io/enable-auth: "true"
   labels:
-    kbl.io/runtime-tier: ga
-    kbl.io/model-source: validated
+    kblife.co.kr/runtime-tier: ga
+    kblife.co.kr/model-source: validated
     opendatahub.io/dashboard: "true"
     opendatahub.io/genai-asset: "true"
 spec:

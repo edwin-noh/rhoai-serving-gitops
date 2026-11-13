@@ -1,7 +1,7 @@
 # vLLM 런타임 (등급 ga, RHAIIS vllm-cuda-rhel9 3.5.2 = upstream vLLM v0.24.0, RHOAI 3.5.2 기본 템플릿과 같은 이미지). 대시보드의 vllm-cuda-runtime-template 과 같은 형식이다.
 # - 이름은 vllm-<등급>-<버전>. ISVC 는 이름으로만 참조하므로 이름만 보고 등급을 알 수 있게 한다
 # - 이미지는 승인 후 Nexus vllm-<등급> repo 에 digest 로 반입한 것만 쓴다
-# - support-status: ga=supported, fast=limited, upstream=unsupported
+# - support-status: ga=supported, fast=limited, community=unsupported
 # - Ops팀이 관리한다. AI팀은 조회만 하고 ISVC 의 runtime 으로 이름을 참조한다
 # - 모델마다 다른 인자(--max-model-len, --tool-call-parser 등)는 여기가 아니라 InferenceService args 에 둔다
 # - ModelCar 이미지의 /models 가 /mnt/models 로 연결된다
@@ -12,7 +12,7 @@ metadata:
   name: vllm-ga-3-5-2
   namespace: kbl-models
   annotations:
-    kbl.io/support-status: supported
+    kblife.co.kr/support-status: supported
     opendatahub.io/apiProtocol: REST
     opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
     # upstream vLLM 버전 (RHOAI 기본 템플릿과 같은 표기). 버전 조회: ops/README.md
@@ -21,7 +21,7 @@ metadata:
     opendatahub.io/template-display-name: vLLM NVIDIA GPU ServingRuntime for KServe
     openshift.io/display-name: vLLM 0.24.0 (RHAIIS 3.5.2, GA)
   labels:
-    kbl.io/runtime-tier: ga
+    kblife.co.kr/runtime-tier: ga
     opendatahub.io/dashboard: "true"
 spec:
   annotations:

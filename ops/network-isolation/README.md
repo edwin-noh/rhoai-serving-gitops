@@ -9,8 +9,8 @@ NetworkPolicy 는 Ops팀이 Git 으로만 만들고(AI팀 Role 에는 NetworkPol
 |---|---|---|
 | `34-netpol-default-deny.yaml` | 네임스페이스의 모든 파드 | Ingress·Egress 기본 차단. **클러스터 밖으로 나가는 것도 여기서 막힌다** |
 | `35-netpol-egress.yaml` | 모든 파드 | DNS(5353), 같은 네임스페이스, API 서버 = 머신 네트워크 CIDR **6443 만** |
-| `36-netpol-model-ingress.yaml` (Raw) | 모델 파드 | 8443(토큰 인증 프록시) ← 같은 ns + `kbl.io/model-consumer=true` ns / 8080(vLLM 직결) ← 모니터링만 |
-| `36-netpol-ingress.yaml` (MaaS) | 모든 파드 | ← MaaS gateway(`openshift-ingress`), 같은 ns(EPP → vLLM), 모니터링 |
+| `36-netpol-ingress.yaml` (Raw, kbl-models) | 모델 파드 | 8443(토큰 인증 프록시) ← 같은 ns + `kblife.co.kr/model-consumer=true` ns / 8080(vLLM 직결) ← 모니터링만 |
+| `36-netpol-ingress.yaml` (MaaS, kbl-maas) | 모든 파드 | ← MaaS gateway(`openshift-ingress`), 같은 ns(EPP → vLLM), 모니터링 |
 | `network/allow-<ns>-<대상>.yaml` (Raw) | 지정 모델 | 다른 네임스페이스 대상 egress (대상 하나 = 파일 하나) |
 
 호출 허용 요약 (Raw):

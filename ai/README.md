@@ -17,8 +17,8 @@
 
 | 라벨 | 함께 맞출 값 |
 |---|---|
-| `kbl.io/runtime-tier: ga\|fast\|upstream` | `spec.predictor.model.runtime: vllm-<등급>-<버전>` |
-| `kbl.io/model-source: validated\|community` | `storageUri: oci://nexus.internal.example:5000/models-<출처>/...@sha256:<digest>` |
+| `kblife.co.kr/runtime-tier: ga\|fast\|community` | `spec.predictor.model.runtime: vllm-<등급>-<버전>` |
+| `kblife.co.kr/model-source: validated\|community` | `storageUri: oci://nexus.internal.example:5000/models-<출처>/...@sha256:<digest>` |
 
 **바꿀 수 있는 것**: 이름, display-name, `storageUri`(허용된 repo 의 digest), 등급/출처(위 표대로), `args`, `env`,
 `resources`(고른 HardwareProfile 과 네임스페이스 GPU quota 범위), replica 수
@@ -48,7 +48,7 @@ uv run hf-modelcar models/<name> \
 
 # 2. 예시를 복사해 수정
 #    qwen3-4b-instruct.yaml: 검증 모델, GA 런타임, GPU 1장
-#    gemma-4-26b.yaml:       커뮤니티 모델, upstream 런타임, GPU 2장 (--tensor-parallel-size=2, gpu-2x)
+#    gemma-4-26b.yaml:       커뮤니티 모델, community 런타임, GPU 2장 (--tensor-parallel-size=2, gpu-2x)
 #    metadata.name / display-name, 라벨, runtime, storageUri, args(--max-model-len 등), resources
 
 # 3. 커밋 전 스키마 확인 (권한이 있으면)
@@ -58,13 +58,13 @@ oc apply --dry-run=server -f ai/raw/<모델>.yaml
 uv run scripts/model-catalog.py
 ```
 
-- 쓸 수 있는 런타임: `oc get servingruntime -n kbl-models -L kbl.io/runtime-tier`
+- 쓸 수 있는 런타임: `oc get servingruntime -n kbl-models -L kblife.co.kr/runtime-tier`
 - 쓸 수 있는 HardwareProfile: `oc get hardwareprofiles -n redhat-ods-applications`
   (ISVC annotation `opendatahub.io/hardware-profile-name`, resources 는 프로파일 범위 안, GPU 2장 이상이면 `--tensor-parallel-size`)
 - 필요한 vLLM 버전이 없으면 Ops팀에 런타임 추가를 요청합니다
 - 다른 네임스페이스(예: vector DB) 접근이 필요하면 Ops팀에 요청합니다. 기본은 DNS 외 모든 egress 차단이고,
   다른 모델과도 통신할 수 없습니다
-- `models-validated` 로의 승격은 승인자가 이미지를 복사한 뒤 `kbl.io/model-source` 와 `storageUri` 를 바꿉니다 (digest 동일)
+- `models-validated` 로의 승격은 승인자가 이미지를 복사한 뒤 `kblife.co.kr/model-source` 와 `storageUri` 를 바꿉니다 (digest 동일)
 
 ## 에이전트용 설정
 
@@ -78,7 +78,7 @@ uv run scripts/model-catalog.py
 
 ## 등급 변경 (예: fast → ga)
 
-`kbl.io/runtime-tier` 와 `runtime` 을 한 커밋에서 함께 바꿉니다. 파드는 새 런타임으로 다시 뜨고
+`kblife.co.kr/runtime-tier` 와 `runtime` 을 한 커밋에서 함께 바꿉니다. 파드는 새 런타임으로 다시 뜨고
 엔드포인트(`<모델>-predictor.kbl-models.svc`)는 그대로입니다.
 
 ## 확인

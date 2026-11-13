@@ -5,7 +5,7 @@
 
 | 항목 | 리소스 | 효과 |
 |---|---|---|
-| 네트워크 | Namespace 라벨 `kbl.io/model-consumer: "true"` | `kbl-models` 의 8443(kube-rbac-proxy)로 접속 가능 (`../kbl-models/36-netpol-model-ingress.yaml`) |
+| 네트워크 | Namespace 라벨 `kblife.co.kr/model-consumer: "true"` | `kbl-models` 의 8443(kube-rbac-proxy)로 접속 가능 (`../kbl-models/36-netpol-ingress.yaml`) |
 | 신원 | ServiceAccount (에이전트 ns) | 에이전트 파드가 이 SA 로 실행, 토큰을 Bearer 로 전송 |
 | 권한 | RoleBinding (ns `kbl-models`) → Role `model-caller` | `kbl-models` 의 **모든** ISVC 호출 가능 (`../kbl-models/50-model-callers.yaml`) |
 
@@ -17,7 +17,7 @@ MaaS(llm-d) 모델은 Kubernetes RBAC 를 쓰지 않는다 — `../maas-policy/`
 2. 커밋 → `kbl-ops-consumers` 앱이 동기화
 3. 확인
    ```bash
-   oc get ns <에이전트 ns> -L kbl.io/model-consumer
+   oc get ns <에이전트 ns> -L kblife.co.kr/model-consumer
    oc auth can-i get inferenceservices/<모델> -n kbl-models --as=system:serviceaccount:<에이전트 ns>:<SA>   # yes
    ```
 4. 에이전트팀에 클라이언트 예시 전달: `../../examples/agent-client.yaml`
@@ -41,7 +41,7 @@ AI 개발자(`kbl-ai-developers`)는 프로젝트를 만들 수 없고(`../platf
 - 파일을 지우고 커밋한다. 앱이 `prune: false` 라 리소스는 남으므로 **직접 지운다**:
   ```bash
   oc delete rolebinding caller-<에이전트 ns> -n kbl-models
-  oc label namespace <에이전트 ns> kbl.io/model-consumer-
+  oc label namespace <에이전트 ns> kblife.co.kr/model-consumer-
   ```
   (Namespace 는 `Delete=false` 라 Argo 가 지우지 않는다. SA 는 에이전트팀과 협의해 삭제)
 - 이미 발급된 SA 토큰은 RoleBinding 을 지우는 즉시 403 이 된다 (프록시가 매 요청 SubjectAccessReview)

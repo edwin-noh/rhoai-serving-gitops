@@ -12,8 +12,8 @@
 #     openshift.io/display-name: Qwen3-4B-Instruct-2507
 #     openshift.io/description: "범용 소형 지시 모델. 에이전트 tool calling, RAG 응답 생성"
 #   labels:
-#     kbl.io/runtime-tier: ga
-#     kbl.io/model-source: validated
+#     kblife.co.kr/runtime-tier: ga
+#     kblife.co.kr/model-source: validated
 #     opendatahub.io/dashboard: "true"
 #     opendatahub.io/genai-asset: "true"
 # spec:

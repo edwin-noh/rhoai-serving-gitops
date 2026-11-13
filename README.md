@@ -18,8 +18,8 @@ ModelCar 이미지 빌드·검증 도구는 [model-lifecycle](https://github.com
 
 | 구분 | 표시 | 실제 근거 | 함께 맞출 값 |
 |---|---|---|---|
-| 런타임 등급 | ServingRuntime·ISVC 라벨 `kbl.io/runtime-tier: ga\|fast\|upstream` | Nexus `vllm-ga` / `vllm-fast` / `vllm-upstream` repo (push 권한) | 이미지 repo, 런타임 이름 `vllm-<등급>-<버전>`, `kbl.io/support-status` |
-| 모델 출처 | ISVC 라벨 `kbl.io/model-source: validated\|community` | Nexus `models-validated` / `models-community` repo (push 권한) | `storageUri` repo |
+| 런타임 등급 | ServingRuntime·ISVC 라벨 `kblife.co.kr/runtime-tier: ga\|fast\|community` | Nexus `vllm-ga` / `vllm-fast` / `vllm-community` repo (push 권한) | 이미지 repo, 런타임 이름 `vllm-<등급>-<버전>`, `kblife.co.kr/support-status` |
+| 모델 출처 | ISVC 라벨 `kblife.co.kr/model-source: validated\|community` | Nexus `models-validated` / `models-community` repo (push 권한) | `storageUri` repo |
 
 - 라벨은 누구나 붙일 수 있으므로 "GA = 승인된 이미지" 는 **Nexus repo 의 push 권한**으로 보장합니다.
   라벨과 실제 이미지/모델 경로가 맞는지는 리뷰(PR)에서 확인합니다
@@ -55,7 +55,7 @@ AI팀이 ISVC 를 직접 수정하므로, ISVC 에서 쓰지 않을 필드(`mode
 
 에이전트 개발자는 [모델 카탈로그](ai/CATALOG.md)에서 모델 이름과 OpenAI 호환 엔드포인트를 확인합니다.
 카탈로그는 AI팀 ISVC 파일에서 `scripts/model-catalog.py` 로 생성하므로 실제 배포와 같습니다.
-호출하려면 에이전트 네임스페이스에 Ops팀이 `kbl.io/model-consumer=true` 라벨을 붙여야 합니다.
+호출하려면 에이전트 네임스페이스에 Ops팀이 `kblife.co.kr/model-consumer=true` 라벨을 붙여야 합니다.
 
 ```python
 from openai import OpenAI

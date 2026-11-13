@@ -141,15 +141,15 @@ flowchart LR
     direction TB
     VGA["vllm-ga"]
     VFA["vllm-fast"]
-    VUP["vllm-upstream"]
+    VUP["vllm-community"]
     MV["models-validated<br/>(승인자만 push)"]
     MC["models-community<br/>(AI팀 push)"]
   end
   subgraph OPSR["운영팀 런타임 (ops/*/runtimes)"]
-    RT["vllm-{등급}-{버전}<br/>label kbl.io/runtime-tier<br/>annotation opendatahub.io/runtime-version<br/>image @sha256 ← vllm-{등급} repo"]
+    RT["vllm-{등급}-{버전}<br/>label kblife.co.kr/runtime-tier<br/>annotation opendatahub.io/runtime-version<br/>image @sha256 ← vllm-{등급} repo"]
   end
   subgraph AIM["AI팀 모델 (ai/raw, ai/maas)"]
-    MD["label kbl.io/runtime-tier · kbl.io/model-source<br/>runtime / baseRefs = vllm-{등급}-{버전}<br/>storageUri / model.uri @sha256 ← models-{출처} repo"]
+    MD["label kblife.co.kr/runtime-tier · kblife.co.kr/model-source<br/>runtime / baseRefs = vllm-{등급}-{버전}<br/>storageUri / model.uri @sha256 ← models-{출처} repo"]
   end
   VGA & VFA & VUP --> RT
   MV & MC --> MD
@@ -158,32 +158,32 @@ flowchart LR
 
 ### 5.1 vLLM 버전과 지원 등급 (운영팀)
 
-| 등급 | `kbl.io/runtime-tier` | 이미지 repo (Nexus) | 런타임 이름 예 | RHOAI 상의 의미 (Configuring your model-serving platform §1.3) |
+| 등급 | `kblife.co.kr/runtime-tier` | 이미지 repo (Nexus) | 런타임 이름 예 | RHOAI 상의 의미 (Configuring your model-serving platform §1.3) |
 |---|---|---|---|---|
 | GA | `ga` | `vllm-ga` (RHAIIS GA, `registry.redhat.io/rhaii/vllm-cuda-rhel9`) | `vllm-ga-3-5-2` | Supported (GA). 공식 지원 annotation 붙이지 않음 |
 | Fast | `fast` | `vllm-fast` (`registry.redhat.io/rhaii-early-access`) | `vllm-fast-3-6-0-ea1` | Limited support — `opendatahub.io/support-status: unsupported` + `opendatahub.io/unsupported-status-accepted: "true"` + `opendatahub.io/fast-version` (§1.4, §2.6) |
-| Upstream | `upstream` | `vllm-upstream` (커뮤니티 vLLM) | `vllm-upstream-0-28-0` | Unsupported (custom). 공식 annotation 없음 |
+| Community | `community` | `vllm-community` (커뮤니티 vLLM) | `vllm-community-0-28-0` | Unsupported (custom). 공식 annotation 없음 |
 
 | 표시 | 위치 | 의미 |
 |---|---|---|
 | 런타임 **이름** `vllm-<등급>-<버전>` | ServingRuntime(Raw), LLMInferenceServiceConfig(MaaS) | 모델은 이름으로만 참조하므로 이름만 보고 등급·버전을 안다. 여러 버전을 같이 둘 수 있다 |
-| `kbl.io/runtime-tier` | 런타임 + 모델(ISVC/LLMISVC) 라벨 | 등급 조회·리뷰용 (컨트롤러는 읽지 않음) |
+| `kblife.co.kr/runtime-tier` | 런타임 + 모델(ISVC/LLMISVC) 라벨 | 등급 조회·리뷰용 (컨트롤러는 읽지 않음) |
 | `opendatahub.io/runtime-version` | 런타임 annotation | upstream vLLM 버전 (예: `v0.24.0`). RHOAI 기본 템플릿과 같은 표기 (관찰, 3.5 미확인) |
 | `image: …@sha256:` | 런타임 컨테이너 | 실제 실행 이미지. `vllm-<등급>` repo 에서만 가져온다 |
 
-- 현재 매니페스트에는 자체 annotation `kbl.io/support-status`(supported/unsupported)가 남아 있다. 공식 키와 의미가 달라
-  정리 대상이다 ([LABELS-ANNOTATIONS.md](LABELS-ANNOTATIONS.md) 권고): GA·Upstream 은 제거, Fast 런타임을 추가할 때 공식 annotation 3개를 붙인다
+- 현재 매니페스트에는 자체 annotation `kblife.co.kr/support-status`(supported/unsupported)가 남아 있다. 공식 키와 의미가 달라
+  정리 대상이다 ([LABELS-ANNOTATIONS.md](LABELS-ANNOTATIONS.md) 권고): GA·Community 는 제거, Fast 런타임을 추가할 때 공식 annotation 3개를 붙인다
 - 새 vLLM 버전 = **새 런타임 파일 추가** (기존 런타임 수정 금지 — 그 런타임을 쓰는 모델이 모두 재기동된다). 모델은 AI팀이 하나씩 옮긴다
-- 등급 변경(예: fast → ga) = 모델 파일에서 `runtime`(또는 `baseRefs`)과 `kbl.io/runtime-tier` 를 **한 커밋**에 함께 바꾼다. 엔드포인트는 그대로
+- 등급 변경(예: fast → ga) = 모델 파일에서 `runtime`(또는 `baseRefs`)과 `kblife.co.kr/runtime-tier` 를 **한 커밋**에 함께 바꾼다. 엔드포인트는 그대로
 
 ### 5.2 모델 출처: validated / community (AI팀 + 승인자)
 
-| 출처 | `kbl.io/model-source` | 모델 이미지 repo (Nexus) | push 권한 | 의미 |
+| 출처 | `kblife.co.kr/model-source` | 모델 이미지 repo (Nexus) | push 권한 | 의미 |
 |---|---|---|---|---|
 | Validated | `validated` | `models-validated` | **승인자만** | Red Hat 검증 모델 또는 사내 승인을 거친 모델 |
 | Community | `community` | `models-community` | AI팀 | 반입 검사(스캔)는 통과했지만 승인 전 |
 
-- 모델 파일의 `storageUri`(Raw) / `model.uri`(MaaS) repo 와 `kbl.io/model-source` 가 **일치**해야 한다 (PR 리뷰에서 확인)
+- 모델 파일의 `storageUri`(Raw) / `model.uri`(MaaS) repo 와 `kblife.co.kr/model-source` 가 **일치**해야 한다 (PR 리뷰에서 확인)
 - 승격(community → validated): 승인자가 이미지를 `models-validated` 로 **digest 그대로 복사** (`skopeo copy --preserve-digests`) →
   AI팀이 `storageUri` repo 와 라벨을 한 커밋으로 변경. digest 가 같으므로 검사한 모델 그대로다
 - 모델 이미지는 `hf-modelcar`(검사 게이트 통과 시에만 빌드)로 만들고 push 시 출력되는 digest 를 쓴다
@@ -192,15 +192,15 @@ flowchart LR
 
 ```bash
 # 런타임별 등급·vLLM 버전·이미지
-oc get servingruntime -A -L kbl.io/runtime-tier \
+oc get servingruntime -A -L kblife.co.kr/runtime-tier \
   -o custom-columns='NS:.metadata.namespace,NAME:.metadata.name,VLLM:.metadata.annotations.opendatahub\.io/runtime-version,IMAGE:.spec.containers[0].image'
-oc get llminferenceserviceconfig -n kbl-maas -L kbl.io/runtime-tier \
+oc get llminferenceserviceconfig -n kbl-maas -L kblife.co.kr/runtime-tier \
   -o custom-columns='NAME:.metadata.name,VLLM:.metadata.annotations.opendatahub\.io/runtime-version,IMAGE:.spec.template.containers[0].image'
 
 # 모델별 런타임·등급·출처
-oc get isvc -n kbl-models -L kbl.io/runtime-tier,kbl.io/model-source \
+oc get isvc -n kbl-models -L kblife.co.kr/runtime-tier,kblife.co.kr/model-source \
   -o custom-columns='NAME:.metadata.name,RUNTIME:.spec.predictor.model.runtime,URI:.spec.predictor.model.storageUri'
-oc get llmisvc -n kbl-maas -L kbl.io/runtime-tier,kbl.io/model-source
+oc get llmisvc -n kbl-maas -L kblife.co.kr/runtime-tier,kblife.co.kr/model-source
 
 # 실제 실행 중인 vLLM 버전 (로그)
 oc logs -n kbl-maas deploy/<모델>-kserve -c main | grep 'vllm version'
@@ -238,7 +238,7 @@ oc logs -n kbl-maas deploy/<모델>-kserve -c main | grep 'vllm version'
 | 출발 | 8443 (토큰 인증 프록시) | 8080 (vLLM 직결) |
 |---|---|---|
 | 같은 네임스페이스 (Gen AI playground 등) | ✅ 토큰 필요 (playground 는 `playground-caller` 토큰) | ❌ |
-| Ops 가 허용한 네임스페이스 (`kbl.io/model-consumer=true`) | ✅ 토큰 필요 (`ops/consumers/<ns>.yaml`) | ❌ |
+| Ops 가 허용한 네임스페이스 (`kblife.co.kr/model-consumer=true`) | ✅ 토큰 필요 (`ops/consumers/<ns>.yaml`) | ❌ |
 | `openshift-user-workload-monitoring` | — | ✅ 메트릭 |
 | 그 외 네임스페이스, 클러스터 밖 | ❌ | ❌ |
 
@@ -284,7 +284,7 @@ NetworkPolicy(operator 소유)는 playground 파드만 대상으로 한다. 모�
 
 ```mermaid
 flowchart LR
-  subgraph AGNS["에이전트 ns (kbl.io/model-consumer=true)"]
+  subgraph AGNS["에이전트 ns (kblife.co.kr/model-consumer=true)"]
     AG["에이전트 파드<br/>SA agent"]
   end
   subgraph KM["ns kbl-models (Raw)"]

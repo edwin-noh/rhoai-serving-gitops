@@ -21,8 +21,8 @@ metadata:
     # (ops/kbl-models/50-model-callers.yaml). 프록시가 API 서버를 호출하므로 아래 automountServiceAccountToken: true 가 필요
     security.opendatahub.io/enable-auth: "true"
   labels:
-    kbl.io/runtime-tier: ga
-    kbl.io/model-source: community
+    kblife.co.kr/runtime-tier: ga
+    kblife.co.kr/model-source: community
     opendatahub.io/dashboard: "true"
     opendatahub.io/genai-asset: "true"
 spec:
