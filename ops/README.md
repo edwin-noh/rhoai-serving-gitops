@@ -125,8 +125,8 @@ skopeo copy --all docker://registry.redhat.io/rhaiis/vllm-cuda-rhel9@sha256:<dig
 
 ### 에이전트 네임스페이스 등록
 
-호출자 하나 = `consumers/<에이전트 ns>.yaml` 파일 하나 (네트워크 라벨 `kblife.co.kr/model-consumer=true` + 호출 SA + `kbl-models` RoleBinding).
-절차·해지: [consumers/README.md](consumers/README.md). 에이전트팀 클라이언트 예시: [../examples/agent-client.yaml](../examples/agent-client.yaml)
+호출자 하나 = `agent/<에이전트 ns>.yaml` 파일 하나 (네트워크 라벨 `kblife.co.kr/model-consumer=true` + 호출 SA + `kbl-models` RoleBinding).
+절차·해지: [agent/README.md](agent/README.md). 에이전트팀 클라이언트 예시: [../examples/agent-client.yaml](../examples/agent-client.yaml)
 
 - ISVC 는 토큰 인증 필수 — 에이전트는 `https://<모델>-predictor.kbl-models.svc:8443` 에 SA 토큰으로 호출한다
 - 에이전트 네임스페이스에 egress 제한이 있다면 그쪽에서 `kbl-models` 의 **8443** 을 열어야 한다

@@ -1,7 +1,7 @@
 # 토큰 인증 모델의 호출 권한 (Ops팀 관리) — kbl-models 의 모든 InferenceService 공용 Role
 # - kube-rbac-proxy 는 호출자 토큰의 주체가 해당 InferenceService 에 get 권한이 있는지만 확인한다
 # - resourceNames 를 두지 않으므로 모델을 추가해도 할 일이 없다
-# - 호출자 등록(이 Role 에 대한 RoleBinding + 네트워크 라벨)은 ops/consumers/<에이전트 ns>.yaml 에서 한다
+# - 호출자 등록(이 Role 에 대한 RoleBinding + 네트워크 라벨)은 ops/agent/<에이전트 ns>.yaml 에서 한다
 # - 특정 모델만 일부 호출자에게 막아야 하면 그 모델을 별도 네임스페이스로 분리한다
 # - get 권한으로 ISVC 정의(args/env)도 읽을 수 있다. ISVC env 에 비밀값을 넣지 않는다
 apiVersion: rbac.authorization.k8s.io/v1

@@ -1,6 +1,6 @@
 # RHOAI 사용자 관리 = 이 파일의 Group 멤버십 (ai-ops 관리).
 # 역할 3단 구분:
-# - kbl-ai-developers: 에이전트 개발자. 지정 프로젝트(ops/consumers/, 예: kai-agent)에서 워크벤치,
+# - kbl-ai-developers: 에이전트 개발자. 지정 프로젝트(ops/agent/, 예: kai-agent)에서 워크벤치,
 #                      kbl-models/kbl-maas view, MaaS 구독, Argo CD kbl-ai 앱 조회/Sync. 프로젝트 생성 불가 (rbac-self-provisioner.yaml)
 # - kbl-ai-admins:     AI admin. 클러스터 전체 view + kbl-models 의 Gen AI playground (ops/kbl-models/42-rbac-ai-admin.yaml).
 #                      프로젝트 생성 가능. kbl-ai-developers 에도 함께 넣는다

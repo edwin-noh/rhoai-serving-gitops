@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: https://github.com/edwin-noh/rhoai-serving-gitops.git
     targetRevision: main
-    path: ops/consumers
+    path: ops/agent
   destination:
     server: https://kubernetes.default.svc
     # 리소스는 각자 namespace 를 명시한다. 이 값은 고아 리소스 검사 범위(비우면 클러스터 전체)를 좁히기 위한 것
@@ -19,7 +19,7 @@ spec:
   syncPolicy:
     automated:
       selfHeal: true
-      prune: false    # 해지는 consumers/README.md 절차로 직접
+      prune: false    # 해지는 agent/README.md 절차로 직접
     syncOptions:
       # Namespace 는 에이전트팀 소유. 라벨만 소유한다
       - ServerSideApply=true

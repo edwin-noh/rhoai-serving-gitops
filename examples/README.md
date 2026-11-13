@@ -4,7 +4,7 @@
 |---|---|---|
 | `agent-client.yaml` | 에이전트팀 (에이전트 네임스페이스) | egress NetworkPolicy, MaaS API 키 Secret, ISVC(SA 토큰)·MaaS(API 키) 호출 Job |
 
-전제: Ops 가 `ops/consumers/<에이전트 ns>.yaml` 로 등록해 두었다 (네트워크 라벨 + SA + 호출 권한).
+전제: Ops 가 `ops/agent/<에이전트 ns>.yaml` 로 등록해 두었다 (네트워크 라벨 + SA + 호출 권한).
 
 ## Python (OpenAI SDK)
 

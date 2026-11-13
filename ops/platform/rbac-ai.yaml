@@ -24,7 +24,7 @@ subjects:
     kind: Group
     name: kbl-ai-developers
 ---
-# AI 개발자 워크벤치 롤: 지정 프로젝트(ops/consumers/<ns>.yaml 의 RoleBinding)에서 워크벤치만 만들고 쓴다
+# AI 개발자 워크벤치 롤: 지정 프로젝트(ops/agent/<ns>.yaml 의 RoleBinding)에서 워크벤치만 만들고 쓴다
 # - RHOAI 3.5 Working on projects 5장 "Manage access to projects": 워크벤치 = kubeflow.org Notebook.
 #   라벨 opendatahub.io/dashboard: "true" 가 있으면 대시보드 Permissions 탭에 AI role 로 표시된다
 # - edit(Contributor) 를 쓰지 않는다: Deployment/Pod 직접 생성, NetworkPolicy·RoleBinding·ServiceAccount 변경이 가능해진다

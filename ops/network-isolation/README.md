@@ -18,7 +18,7 @@ NetworkPolicy 는 Ops팀이 Git 으로만 만들고(AI팀 Role 에는 NetworkPol
 | 출발 | 8443 | 8080 |
 |---|---|---|
 | 같은 네임스페이스 (Gen AI playground — AI admin 만 운영) | ✅ 토큰 필요 | ❌ |
-| Ops 가 허용한 네임스페이스 (`../consumers/<ns>.yaml`) | ✅ 토큰 필요 | ❌ |
+| Ops 가 허용한 네임스페이스 (`../agent/<ns>.yaml`) | ✅ 토큰 필요 | ❌ |
 | 모니터링 | — | ✅ |
 | 그 외 네임스페이스, 클러스터 밖 | ❌ | ❌ |
 

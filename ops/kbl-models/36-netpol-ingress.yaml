@@ -2,7 +2,7 @@
 # - 8443(토큰 인증 프록시) ← 같은 네임스페이스(playground 등) + Ops 가 허용한 네임스페이스(라벨 kblife.co.kr/model-consumer=true)
 #   토큰 검증·권한(Role model-caller)은 프록시가 한다 → 토큰 없이는 어디서도 호출 불가
 # - 8080(vLLM 직결) ← 메트릭 수집(User Workload Monitoring)만. 같은 네임스페이스에서도 열지 않는다 (토큰 우회 방지)
-# - 호출자 등록(라벨 + SA + RoleBinding): ops/consumers/<ns>.yaml
+# - 호출자 등록(라벨 + SA + RoleBinding): ops/agent/<ns>.yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
