@@ -1,0 +1,36 @@
+# RHOAI 관측성 스택(redhat-ods-monitoring 의 OTel collector)이 llm-d EPP(scheduler) 메트릭을 수집할 수 있게 한다
+# - llm-d 가 만드는 ServiceMonitor kserve-llm-isvc-scheduler(-default) 는 Secret kserve-metrics-reader-sa-secret 의
+#   토큰으로 EPP /metrics 에 인증한다. collector 의 target allocator 가 이 Secret 을 못 읽으면 ServiceMonitor 를
+#   InvalidConfiguration 으로 버린다 → RHOAI LLM Traffic(오류율)·LLM Utilization(큐) 패널이 빈다
+# - RHOAI 3.5 가 이 권한을 주지 않는다. 그 Secret 하나만 get (resourceNames)
+# - llm-d 네임스페이스가 늘어나면 그 네임스페이스에도 같은 Role/RoleBinding 이 필요하다
+# - redhat-ods-monitoring 쪽 권한(TA 의 Secret metadata informer)은 openshift-cluster-gitops
+#   components-observability/collector-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rhoai-monitoring-scrape-credentials
+  namespace: kbl-maas
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    resourceNames:
+      - kserve-metrics-reader-sa-secret
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rhoai-monitoring-scrape-credentials
+  namespace: kbl-maas
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rhoai-monitoring-scrape-credentials
+subjects:
+  - kind: ServiceAccount
+    name: data-science-collector-collector
+    namespace: redhat-ods-monitoring

@@ -11,3 +11,6 @@ metadata:
     opendatahub.io/dashboard: "true"
     maas.opendatahub.io/gateway-access: "true"
     argocd.argoproj.io/managed-by: openshift-gitops
+    # CPU request = CPU limit x 10% (openshift-cluster-gitops cluster-resource-override). 모델 파드가 2 CPU 를
+    # request 로 잡아 SNO 스케줄링이 막히는 것을 막는다. 라벨 이후 새로 생기는 파드부터 적용된다
+    clusterresourceoverrides.admission.autoscaling.openshift.io/enabled: "true"
