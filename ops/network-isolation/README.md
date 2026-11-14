@@ -9,8 +9,8 @@ NetworkPolicy 는 Ops팀이 Git 으로만 만들고(AI팀 Role 에는 NetworkPol
 |---|---|---|
 | `34-netpol-default-deny.yaml` | 네임스페이스의 모든 파드 | Ingress·Egress 기본 차단. **클러스터 밖으로 나가는 것도 여기서 막힌다** |
 | `35-netpol-egress.yaml` | 모든 파드 | DNS(5353), 같은 네임스페이스, API 서버 = 머신 네트워크 CIDR **6443 만** |
-| `36-netpol-ingress.yaml` (Raw, kbl-models) | 모델 파드 | 8443(토큰 인증 프록시) ← 같은 ns + `kblife.co.kr/model-consumer=true` ns / 8080(vLLM 직결) ← 모니터링만 |
-| `36-netpol-ingress.yaml` (MaaS, kbl-maas) | 모든 파드 | ← MaaS gateway(`openshift-ingress`), 같은 ns(EPP → vLLM), 모니터링 |
+| `36-netpol-ingress.yaml` (Raw, kbl-models) | 모델 파드 | 8443(토큰 인증 프록시) ← 같은 ns + `kblife.co.kr/model-consumer=true` ns. 메트릭 포트(8080 vLLM, 9464 OGX 등) ← 모니터링 네임스페이스(`openshift-monitoring`, `openshift-user-workload-monitoring`, `redhat-ods-monitoring`) 전체만 (`allow-monitoring-ingress`) |
+| `36-netpol-ingress.yaml` (MaaS, kbl-maas) | 모든 파드 | ← MaaS gateway(`openshift-ingress`), 같은 ns(EPP → vLLM), 모니터링 네임스페이스 3개 |
 | `network/allow-<ns>-<대상>.yaml` (Raw) | 지정 모델 | 다른 네임스페이스 대상 egress (대상 하나 = 파일 하나) |
 
 호출 허용 요약 (Raw):
@@ -19,7 +19,7 @@ NetworkPolicy 는 Ops팀이 Git 으로만 만들고(AI팀 Role 에는 NetworkPol
 |---|---|---|
 | 같은 네임스페이스 (Gen AI playground — AI admin 만 운영) | ✅ 토큰 필요 | ❌ |
 | Ops 가 허용한 네임스페이스 (`../agent/<ns>.yaml`) | ✅ 토큰 필요 | ❌ |
-| 모니터링 | — | ✅ |
+| 모니터링 네임스페이스 3개 (모든 포트 — cluster-admin 관리 영역이라 네임스페이스 단위로 연다. 포트·파드 단위 대안은 36 파일에 주석) | — | ✅ |
 | 그 외 네임스페이스, 클러스터 밖 | ❌ | ❌ |
 
 → **토큰 없이 vLLM 에 닿는 경로가 없다.** 8080 을 열면 `<모델>-metrics` Service 로 토큰 없이 호출되므로(PoC 에서 확인) 같은 ns 에도 열지 않는다.

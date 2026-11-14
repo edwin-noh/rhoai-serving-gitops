@@ -257,7 +257,7 @@ oc logs -n kbl-maas deploy/<모델>-kserve -c main | grep 'vllm version'
 |---|---|---|
 | 같은 네임스페이스 (Gen AI playground 등) | ✅ 토큰 필요 (playground 는 `playground-caller` 토큰) | ❌ |
 | Ops 가 등록한 네임스페이스 (`kblife.co.kr/model-consumer=true`) | ✅ 토큰 필요 (`ops/agent/<ns>.yaml`) | ❌ |
-| `openshift-user-workload-monitoring` | — | ✅ 메트릭 |
+| 모니터링 네임스페이스 (`openshift-monitoring`, `openshift-user-workload-monitoring`, `redhat-ods-monitoring`) | ✅ (모든 포트) | ✅ 메트릭 (OGX 9464 포함) |
 | 그 외 네임스페이스, 클러스터 밖 | ❌ | ❌ |
 
 토큰 없이 vLLM 에 닿는 경로는 없다 (PoC 확인: `kai-agent` 토큰 200 / 무토큰 401 / 8080 차단, 라벨 없는 ns 는 연결 자체 차단).
@@ -284,7 +284,7 @@ kubelet 프로브와 `oc port-forward` 는 NetworkPolicy 영향을 받지 않는
 
 | 방향 | 출발/목적지 | 결과 |
 |---|---|---|
-| ingress | `openshift-ingress` (MaaS gateway), 같은 네임스페이스 (EPP → vLLM), 모니터링 | ✅ |
+| ingress | `openshift-ingress` (MaaS gateway), 같은 네임스페이스 (EPP → vLLM), 모니터링 네임스페이스 3개 | ✅ |
 | ingress | 그 외 (에이전트 네임스페이스 포함) | ❌ **MaaS 모델은 gateway(인증·토큰 한도)를 거쳐야만 호출** (PoC 확인) |
 | egress | DNS, 같은 네임스페이스, API 서버 6443 (EPP) | ✅ |
 | egress | 그 외 (클러스터 밖 포함) | ❌ |

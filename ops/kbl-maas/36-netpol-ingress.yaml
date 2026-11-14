@@ -1,4 +1,4 @@
-# kbl-maas 로 들어올 수 있는 것: MaaS gateway(openshift-ingress), 같은 네임스페이스(EPP → vLLM), 메트릭 수집
+# kbl-maas 로 들어올 수 있는 것: MaaS gateway(openshift-ingress), 같은 네임스페이스(EPP → vLLM), 메트릭 수집(모니터링 네임스페이스)
 # - 메트릭 수집은 두 곳이다: User Workload Monitoring(콘솔 Observe), RHOAI 관측성 스택(redhat-ods-monitoring 의 OTel collector →
 #   RHOAI 콘솔 LLM Traffic/Performance/Utilization 대시보드). 둘 다 같은 PodMonitor/ServiceMonitor 를 읽는다
 # 그 외(에이전트 네임스페이스 포함)는 막힌다 → MaaS 모델은 gateway(인증·토큰 한도)를 거쳐야만 호출된다
@@ -17,14 +17,24 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: openshift-ingress
         - podSelector: {}
+        # 모니터링 네임스페이스 전체 (cluster-admin 관리 영역이라 파드 단위로 좁히지 않는다. 메트릭 포트가 늘어도 그대로 동작)
         - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: openshift-user-workload-monitoring
-        # redhat-ods-monitoring 전체가 아니라 OTel collector 파드만 (토큰 없이 vLLM 을 부를 수 있는 범위를 줄인다)
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: redhat-ods-monitoring
-          podSelector:
-            matchLabels:
-              app.kubernetes.io/component: opentelemetry-collector
-              app.kubernetes.io/instance: redhat-ods-monitoring.data-science-collector
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  - openshift-monitoring
+                  - openshift-user-workload-monitoring
+                  - redhat-ods-monitoring
+        # [대안: 파드 단위] 모니터링 네임스페이스 전체 대신 수집기만 열려면 위 namespaceSelector 를 지우고 아래 주석을 해제한다
+        # - namespaceSelector:
+        #     matchLabels:
+        #       kubernetes.io/metadata.name: openshift-user-workload-monitoring
+        # # redhat-ods-monitoring 전체가 아니라 OTel collector 파드만
+        # - namespaceSelector:
+        #     matchLabels:
+        #       kubernetes.io/metadata.name: redhat-ods-monitoring
+        #   podSelector:
+        #     matchLabels:
+        #       app.kubernetes.io/component: opentelemetry-collector
+        #       app.kubernetes.io/instance: redhat-ods-monitoring.data-science-collector
