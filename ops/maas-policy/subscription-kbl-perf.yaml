@@ -1,0 +1,19 @@
+# 성능 테스트 전용 구독. 부하 테스트가 토큰 한도(429)에 걸리지 않도록 한도를 크게 둔다.
+# 실제 경로(Gateway → Authorino → Limitador)는 그대로 거친다. 인증을 끄는 annotation 은 쓰지 않는다
+# (RHOAI 3.5 llm-d 문서: "Production deployments must not set this annotation").
+# 한도는 이 SNO(GPU 1장)의 최대 처리량(약 2만 tokens/분)보다 충분히 크게 잡은 값이다. 고객 환경에서는 측정 대상 규모에 맞춘다
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSSubscription
+metadata:
+  name: kbl-perf-testers
+  namespace: models-as-a-service
+spec:
+  owner:
+    groups:
+      - name: kbl-perf-testers
+  modelRefs:
+    - name: qwen3-1-7b
+      namespace: kbl-maas
+      tokenRateLimits:
+        - limit: 2000000
+          window: 1m

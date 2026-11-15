@@ -1,0 +1,18 @@
+# 성능 평가(EvalHub GuideLLM job)가 kbl-models 의 Raw 모델을 kube-rbac-proxy(8443) 경로로 호출한다.
+# - 네임스페이스 kbl-eval 은 eval 리포(evaluation/evalhub/tenant/namespace.yaml)가 관리한다.
+#   kblife.co.kr/model-consumer 라벨도 그쪽에 있다(네트워크). 여기서는 토큰 권한만 연다.
+# - job pod 는 EvalHub operator 가 만든 SA 로 실행되고, sidecar 가 그 SA 토큰을 Bearer 로 넣는다
+#   (RHOAI 3.5 Evaluating AI systems 2.16 "Authenticate models with a ServiceAccount token")
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: caller-kbl-eval
+  namespace: kbl-models
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: model-caller
+subjects:
+  - kind: ServiceAccount
+    name: evalhub-redhat-ods-applications-job
+    namespace: kbl-eval

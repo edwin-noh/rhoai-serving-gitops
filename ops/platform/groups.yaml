@@ -30,3 +30,13 @@ metadata:
   name: kbl-ai-admins
 users:
   - ai-admin
+---
+# 성능(부하) 테스트 전용 MaaS 구독 그룹 (ops/maas-policy/subscription-kbl-perf.yaml).
+# 이 그룹 사용자가 발급한 API key 로 EvalHub GuideLLM job 이 MaaS 모델에 부하를 준다.
+# 일반 구독(kbl-ai-developers) 한도에 걸리지 않게 다른 구독 그룹과 겹치지 않는 사용자만 넣는다
+apiVersion: user.openshift.io/v1
+kind: Group
+metadata:
+  name: kbl-perf-testers
+users:
+  - ops

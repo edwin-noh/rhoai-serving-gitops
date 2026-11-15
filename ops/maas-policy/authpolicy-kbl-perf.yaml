@@ -1,0 +1,13 @@
+# 성능 테스트 전용: kbl-perf-testers 그룹이 MaaS 모델을 호출할 수 있다
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSAuthPolicy
+metadata:
+  name: kbl-perf-testers
+  namespace: models-as-a-service
+spec:
+  modelRefs:
+    - name: qwen3-1-7b
+      namespace: kbl-maas
+  subjects:
+    groups:
+      - name: kbl-perf-testers
