@@ -155,6 +155,116 @@ GPU Operator 의 time-slicing 은 **노드 단위·리소스 이름 단위**라�
 2. 공유 대신 파드 1개가 조각을 통째로 쓰고 그 안에서 worker 여러 개를 돌린다 (OCR worker)
 3. Embedding 과 Reranker 를 각자 전용 `1g.34gb` 에 둔다 (GPU 0·1 의 예비 조각 사용)
 
+### 8.1 예시로 보는 문제 (`kbl-dgx-b300-v1` 그대로 time-slicing 을 켜면)
+
+`1g.67gb` 는 노드에 6개이고 용도가 둘로 나뉜다.
+
+| 물리 조각 | 계획상 용도 | 원하는 방식 |
+|---|---|---|
+| GPU 0, 1 의 `1g.67gb` | OCR worker | 파드 4개가 나눠 씀 |
+| GPU 2, 3, 4 의 `1g.67gb` | RAG | 파드 1개 전용 |
+| GPU 5 의 `1g.67gb` | 예비 | — |
+
+OCR worker 때문에 아래처럼 설정하면, 리소스 이름 단위라 **6개 조각 전부**에 걸린다.
+
+```yaml
+sharing:
+  timeSlicing:
+    resources:
+      - name: nvidia.com/mig-1g.67gb   # GPU 0·1 것만 고를 방법이 없다
+        replicas: 4
+```
+
+- 쿠버네티스에는 `nvidia.com/mig-1g.67gb` 가 **24개(6×4)** 로 보이고, 스케줄러는 어느 GPU 의 어느 조각인지 모른다
+- OCR worker 8개 + RAG 3개가 각각 슬롯 하나를 받으면, 예를 들어 이렇게 섞일 수 있다
+
+| 물리 조각 | 실제 배치 | 결과 |
+|---|---|---|
+| GPU 0 `1g.67gb` | OCR×3 + **RAG×1** | RAG(27B vLLM)가 OCR 파드와 66.5 GiB 를 나눠 써 메모리 부족·지연 |
+| GPU 2 `1g.67gb` | **RAG×2** | 두 번째 vLLM 이 메모리를 못 잡아 기동 실패 |
+| GPU 3 `1g.67gb` | OCR×4 | 계획과 다름 |
+| GPU 4, 5 `1g.67gb` | 비어 있음 | 낭비 |
+
+time-slicing 으로 나눈 조각 안에는 **메모리 격리가 없고**, 배치는 지정할 수 없어 재시작할 때마다 달라질 수 있다.
+`1g.34gb` 도 같다 (임베딩·리랭커 때문에 쪼개면 OCR VLM2 조각도 쪼개진다).
+
+### 8.2 방법 A (채택 방향): RAG 를 `1g.34gb` 로 옮긴다
+
+나눠 쓸 프로파일(`1g.67gb`)을 노드에서 OCR worker 만 쓰게 만든다. NVFP4 27B 는 약 15GB 라 RAG 를 30.5 GiB 조각(`1g.34gb`)에 올릴 수 있다.
+
+| GPU | 구성 | 용도 |
+|---|---|---|
+| 0, 1 | `2g.67gb`×1 + `1g.34gb`×4 + `1g.67gb`×1 (v1 과 같음) | OCR VLM1 · VLM2×2 + 임베딩 + 리랭커 · **OCR worker (공유 ×4)** |
+| 2, 3, 4 | `2g.67gb`×3 + **`1g.34gb`×1** | AI Agent×3 · **RAG (전용)** |
+| 5 | `2g.67gb`×3 + `1g.34gb`×1 | Scale-out buffer |
+| 6, 7 | MIG 끔 | 통 GPU |
+
+- GPU 2–5 는 메모리 6+1 = 7/8, SM 6+1 = 7/7 (메모리 1조각이 남는다)
+- 노드의 `1g.67gb` 는 GPU 0·1 의 2개뿐 → `replicas: 4` 로 슬롯 **8개**, OCR worker 만 쓴다
+- `1g.34gb` 는 VLM2·임베딩·리랭커·RAG 모두 **전용**(조각당 파드 1개). GPU 0·1 의 4개 = VLM2 2 + 임베딩 1 + 리랭커 1 (예비 없음)
+
+참고용 mig-parted 구성 (아직 `10-mig-config.yaml` 에 넣지 않았다):
+
+```yaml
+kbl-dgx-b300-v2:
+  - devices: [0, 1]
+    mig-enabled: true
+    mig-devices: {"2g.67gb": 1, "1g.34gb": 4, "1g.67gb": 1}
+  - devices: [2, 3, 4, 5]
+    mig-enabled: true
+    mig-devices: {"2g.67gb": 3, "1g.34gb": 1}
+  - devices: [6, 7]
+    mig-enabled: false
+```
+
+적용 후 노드 리소스 기대값:
+
+| 리소스 | 개수 |
+|---|---|
+| `nvidia.com/mig-2g.67gb` | 14 |
+| `nvidia.com/mig-1g.34gb` | 12 (GPU 0·1 각 4 + GPU 2–5 각 1) |
+| `nvidia.com/mig-1g.67gb` | 2 → time-slicing 후 **8** |
+| `nvidia.com/gpu` | 2 |
+
+time-slicing 설정 (GPU Operator device plugin config, 3.5 미확인):
+
+```yaml
+version: v1
+sharing:
+  timeSlicing:
+    failRequestsGreaterThanOne: true   # 한 파드가 슬롯 2개 이상을 못 받게
+    resources:
+      - name: nvidia.com/mig-1g.67gb
+        replicas: 4
+```
+
+- ClusterPolicy 의 `devicePlugin.config` 로 연결하므로 **ClusterPolicy 를 관리하는 리포**에 둔다 (테스트 클러스터: openshift-cluster-gitops 의 gpu-operator)
+- `nvidia.com/mig-1g.34gb`, `nvidia.com/mig-2g.67gb` 는 목록에 넣지 않는다 (전용 유지)
+
+소비 쪽 변경:
+
+| 대상 | 변경 |
+|---|---|
+| RAG ISVC | HardwareProfile `mig-1g-34gb`, `resources.limits: nvidia.com/mig-1g.34gb: 1` (7번 표의 RAG 행) |
+| OCR worker (일반 파드) | `resources.limits: nvidia.com/mig-1g.67gb: 1` |
+| quota `kbl-models` | `mig-2g.67gb` 14, `mig-1g.34gb` 12, `mig-1g.67gb` 0 |
+| quota (OCR worker 네임스페이스) | `mig-1g.67gb` 8 |
+
+주의:
+- OCR worker 4개는 한 조각의 66.5 GiB 를 **격리 없이** 나눠 쓴다 → 앱에서 파드별 GPU 메모리 상한을 둔다
+- RAG 는 30.5 GiB 에서 NVFP4 가중치(약 15GB)를 뺀 KV 캐시 여유가 필요한 문맥 길이·동시 요청에 충분한지 장비에서 측정한다
+
+반영할 때 할 일 (아직 하지 않음):
+1. `10-mig-config.yaml` 에 `kbl-dgx-b300-v2` 추가, `20-node-labels.yaml` 라벨을 v2 로
+2. `40-resourcequota-mig.yaml` 을 위 quota 로, OCR worker 네임스페이스 quota 추가 (`30` HardwareProfile 은 그대로 사용 가능)
+3. device plugin time-slicing 설정을 ClusterPolicy 관리 리포에 추가
+4. 2–5단계 절차대로 적용·검증
+
+### 8.3 대안 (방법 B)
+
+time-slicing 없이 OCR worker 를 `1g.67gb` 하나당 파드 1개로 두고, 그 안에서 worker 여러 개를 돌린다. 임베딩·리랭커는 전용 `1g.34gb`.
+MIG 구성은 v1 그대로, 앱 구조를 바꿔야 한다.
+
 ## 9. 롤백
 
 `20-node-labels.yaml` 의 라벨을 `all-disabled` 로 바꾸고 커밋 → `kbl-ops-mig` 수동 Sync. 1단계처럼 GPU 를 쓰는 파드를 먼저 내린다.
