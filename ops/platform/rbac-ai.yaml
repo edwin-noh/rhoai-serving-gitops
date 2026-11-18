@@ -1,4 +1,4 @@
-# AI 개발자가 HardwareProfile 을 조회할 수 있게 한다 (프로파일은 redhat-ods-applications 에 있다).
+# AI 개발자·AI admin(kbl-ai-developers, kbl-ai-admins)이 HardwareProfile 을 조회할 수 있게 한다 (프로파일은 redhat-ods-applications 에 있다).
 # 대시보드의 워크벤치 생성 화면이 이 목록을 사용자 권한으로 list/watch 한다 (audit 로그 확인). 없으면 프로파일을 고를 수 없다
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -23,6 +23,9 @@ subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
     name: kbl-ai-developers
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kbl-ai-admins
 ---
 # AI 개발자 워크벤치 롤: 지정 프로젝트(ops/agent/<ns>.yaml 의 RoleBinding)에서 워크벤치만 만들고 쓴다
 # - RHOAI 3.5 Working on projects 5장 "Manage access to projects": 워크벤치 = kubeflow.org Notebook.
@@ -67,6 +70,7 @@ rules:
 ---
 # Gen AI playground 롤: 바인딩한 프로젝트에서 playground(OGXServer)를 만들고 쓴다
 # - 사용처: kbl-models 의 AI admin (ops/kbl-models/42-rbac-ai-admin.yaml)
+# - AI admin 의 조회 권한은 RHOAI 프로젝트별 view 뿐이다 (클러스터 전체 view 는 주지 않는다 — developers 와 같은 바인딩에 subject 로 들어 있다)
 # - edit/admin 은 쓰지 않는다 (NetworkPolicy·Deployment·Pod 생성 권한 포함 → 승인 안 된 워크로드·네트워크 개방 가능)
 # - 필요한 verb 는 대시보드로 playground 를 만들며 확인한 것 (RHOAI 3.5 문서에 목록 없음 — 3.5 미확인)
 apiVersion: rbac.authorization.k8s.io/v1
@@ -89,17 +93,3 @@ rules:
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
     verbs: ["get", "list", "watch"]
----
-# AI admin(kbl-ai-admins): 클러스터 전체 조회 (기본 view 롤 — Secret 은 제외)
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: kbl-ai-admins-view
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: view
-subjects:
-  - apiGroup: rbac.authorization.k8s.io
-    kind: Group
-    name: kbl-ai-admins

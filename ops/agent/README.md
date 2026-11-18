@@ -8,6 +8,7 @@
 | 네트워크 | Namespace 라벨 `kblife.co.kr/model-consumer: "true"` | `kbl-models` 의 8443(kube-rbac-proxy)로 접속 가능 (`../kbl-models/36-netpol-ingress.yaml`) |
 | 신원 | ServiceAccount (에이전트 ns) | 에이전트 파드가 이 SA 로 실행, 토큰을 Bearer 로 전송 |
 | 권한 | RoleBinding (ns `kbl-models`) → Role `model-caller` | `kbl-models` 의 **모든** ISVC 호출 가능 (`../kbl-models/50-model-callers.yaml`) |
+| MLflow | RoleBinding `<ns>-mlflow` (에이전트 ns) → ClusterRole `mlflow-operator-mlflow-integration`, Group `system:serviceaccounts:<ns>` | 그 ns 의 모든 SA 가 MLflow(workspace = 에이전트 ns)에 트레이스·실험 기록 (RHOAI 3.5 *Working with MLflow* 2.3) |
 
 모델을 추가할 때는 할 일이 없다. 호출자를 추가할 때만 파일을 하나 추가한다.
 MaaS(llm-d) 모델은 Kubernetes RBAC 를 쓰지 않는다 — `../maas-policy/` 의 Subscription/AuthPolicy 에 사용자 그룹을 넣는다.
@@ -19,6 +20,9 @@ MaaS(llm-d) 모델은 Kubernetes RBAC 를 쓰지 않는다 — `../maas-policy/`
    ```bash
    oc get ns <에이전트 ns> -L kblife.co.kr/model-consumer
    oc auth can-i get inferenceservices/<모델> -n kbl-models --as=system:serviceaccount:<에이전트 ns>:<SA>   # yes
+   # MLflow: pseudo-resource 라 oc auth can-i 로는 확인이 안 된다 → SubjectAccessReview (조회만, 저장 안 됨)
+   printf '{"apiVersion":"authorization.k8s.io/v1","kind":"SubjectAccessReview","spec":{"user":"system:serviceaccount:<에이전트 ns>:<SA>","groups":["system:serviceaccounts:<에이전트 ns>"],"resourceAttributes":{"namespace":"<에이전트 ns>","group":"mlflow.kubeflow.org","resource":"experiments","verb":"create"}}}' \
+     | oc create -f - -o jsonpath='{.status.allowed}{"\n"}'   # true
    ```
 4. 에이전트팀에 클라이언트 예시 전달: `../../examples/agent-client.yaml`
 

@@ -57,14 +57,26 @@ Ops 점검은 `oc port-forward`(NetworkPolicy 영향 없음)로 한다.
 
 ## 검증 (클러스터)
 
+모델이 떠 있어야 한다 (`serving.kserve.io/stop` 이면 파드가 없어 exit 2).
+
 ```bash
-# 모델 파드 안에서 나가는 연결 (allow/deny 기대값)
-./verify.sh kbl-models qwen3-4b-instruct \
-  vector-db.rag-system.svc:6333:allow \
-  some-svc.other-namespace.svc:8080:deny \
-  huggingface.co:443:deny \
-  10.0.0.10:443:deny            # 사내 다른 시스템 IP
+# egress: 모델 파드 안에서 연결 시도 (조회만). 대상을 안 주면 기본 세트
+#   API 서버 6443 허용, 노드 22·다른 ns 서비스(console)·quay.io 거부, kbl-maas 는 OTel collector 4317 허용
+./verify.sh egress kbl-models qwen3-4b-instruct
+./verify.sh egress kbl-maas   qwen3-1-7b
+# 대상 직접 지정 (network/allow-*.yaml 로 연 대상, 사내 다른 시스템 IP 등)
+./verify.sh egress kbl-models qwen3-4b-instruct vector-db.rag-system.svc:6333:allow 10.0.0.10:443:deny
+
+# ingress: 임시 파드(oc run --rm)를 띄워 모델 파드로 연결 (파드를 만들므로 실행 전 y/N 확인)
+#   kbl-models: 같은 ns(playground-caller) / kai-agent(agent) / 라벨 없는 ns → 8443 토큰 200, 무토큰 401, 8080 차단
+#   kbl-maas  : kai-agent / 라벨 없는 ns → vLLM 8000 차단
+./verify.sh ingress kbl-models qwen3-4b-instruct default
+./verify.sh ingress kbl-maas   qwen3-1-7b default
 ```
+
+- 이름 해석 실패는 `deny` 가 아니라 `nxdomain` 으로 따로 표시한다 (대상이 없거나 이름이 틀린 경우를 차단으로 오인하지 않게)
+- 폐쇄망: `CLIENT_IMAGE=<Nexus 의 curl 있는 UBI 이미지>`. kbl-maas 파드 라벨·컨테이너는 업스트림 KServe 기준
+  (`app.kubernetes.io/component=llminferenceservice-workload`, `main` — 3.5 미확인). 다르면 `POD_SELECTOR`, `CONTAINER`, `MAAS_PORT` 로 지정
 
 PoC 확인 결과 (2026-11-12):
 

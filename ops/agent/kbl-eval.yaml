@@ -16,3 +16,23 @@ subjects:
   - kind: ServiceAccount
     name: evalhub-redhat-ods-applications-job
     namespace: kbl-eval
+---
+# RHOAI 프로젝트 조회: AI 개발자·AI admin 은 RHOAI 프로젝트(대시보드 라벨 네임스페이스)마다 view 를 받는다
+# - RBAC 는 라벨로 네임스페이스를 고를 수 없어 프로젝트마다 RoleBinding 을 둔다 (kbl-models, kbl-maas, kai-agent, kbl-eval)
+# - 쓰기 권한은 없다. 평가 실행 권한은 eval 리포의 kbl-evalhub-user 가 따로 준다
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kbl-ai-developers-view
+  namespace: kbl-eval
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kbl-ai-developers
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kbl-ai-admins

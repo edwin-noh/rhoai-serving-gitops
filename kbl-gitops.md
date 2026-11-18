@@ -81,8 +81,8 @@ sequenceDiagram
 | 그룹 | 역할 | 권한 |
 |---|---|---|
 | `kbl-ai-ops` | 운영팀 | `cluster-admin`, Argo CD `kbl-ops` 전체 |
-| `kbl-ai-admins` | AI admin | 클러스터 전체 view, kbl-models playground, 프로젝트 생성 |
-| `kbl-ai-developers` | AI 개발자 | kbl-models·kbl-maas view, 지정 프로젝트(`kai-agent`) 워크벤치, MaaS API 키 발급. 프로젝트 생성 불가 |
+| `kbl-ai-admins` | AI admin | developers 권한 + kbl-models playground + 프로젝트 생성 (클러스터 전체 view 없음) |
+| `kbl-ai-developers` | AI 개발자 | RHOAI 프로젝트(kbl-models·kbl-maas·kai-agent·kbl-eval) view, 지정 프로젝트(`kai-agent`) 워크벤치, MaaS API 키 발급. 프로젝트 생성 불가 |
 
 ## 5. 모델 호출
 

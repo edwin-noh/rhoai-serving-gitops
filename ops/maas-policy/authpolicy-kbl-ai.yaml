@@ -11,3 +11,4 @@ spec:
   subjects:
     groups:
       - name: kbl-ai-developers
+      - name: kbl-ai-admins

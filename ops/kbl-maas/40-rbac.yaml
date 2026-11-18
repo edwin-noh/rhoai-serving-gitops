@@ -1,5 +1,5 @@
-# AI 개발자(kbl-ai-developers): kbl-maas 조회 = 기본 view 롤 (LLMInferenceService 변경은 Git → Argo CD)
-# ai-ops 는 cluster-admin(ops/platform/rbac-ops.yaml), AI admin 은 클러스터 전체 view 라 여기서 따로 주지 않는다
+# AI 개발자(kbl-ai-developers)·AI admin(kbl-ai-admins): kbl-maas 조회 = 기본 view 롤 (LLMInferenceService 변경은 Git → Argo CD)
+# ai-ops 는 cluster-admin(ops/platform/rbac-ops.yaml)이라 여기서 따로 주지 않는다
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -13,3 +13,6 @@ subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
     name: kbl-ai-developers
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kbl-ai-admins

@@ -1,8 +1,8 @@
-# AI 개발자(kbl-ai-developers): kbl-models 조회 = 기본 view 롤 (Secret 제외 전부 조회, 프로젝트 목록에도 보인다)
+# AI 개발자(kbl-ai-developers)·AI admin(kbl-ai-admins): kbl-models 조회 = 기본 view 롤 (Secret 제외 전부 조회, 프로젝트 목록에도 보인다)
 # - InferenceService 변경(파라미터 조정 포함)은 Git(ai/raw) → Argo CD 로만 한다
 # - edit 롤은 쓰지 않는다. edit 는 Pod/Deployment 를 직접 만들 수 있어 승인되지 않은 이미지를 실행할 수 있고,
 #   NetworkPolicy/Secret/ServiceAccount 도 바꿀 수 있다
-# - AI admin(kbl-ai-admins)은 클러스터 전체 view 가 있다 (ops/platform/rbac-ai.yaml)
+# - AI admin(kbl-ai-admins)도 subject 에 함께 넣는다. OpenShift Group 은 중첩이 안 되므로 developers 권한을 주는 곳마다 admins 를 같이 둔다
 # - Argo CD 에서는 AppProject kbl-ai(ops/gitops/appprojects.yaml)의 role 로 앱 조회/Sync 만 할 수 있다
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -17,3 +17,6 @@ subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
     name: kbl-ai-developers
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kbl-ai-admins

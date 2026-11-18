@@ -93,14 +93,16 @@ AppProject(`ops/gitops/appprojects.yaml`)는 Argo 가 관리하지 않으므로 
 | 그룹 | 역할 | 쿠버네티스 권한 | 그 밖의 권한 |
 |---|---|---|---|
 | `kbl-ai-ops` | 운영팀 (클러스터 어드민) | `cluster-admin` (`ops/platform/rbac-ops.yaml`). 변경은 Git → Argo CD | Argo CD `kbl-ops` 전체 + `kbl-ai` 조회/Sync, 대시보드 `adminGroups` |
-| `kbl-ai-admins` | AI admin | 클러스터 전체 `view`(Secret 제외), kbl-models 의 Gen AI playground(ClusterRole `kbl-ai-playground`), **프로젝트 생성 가능** | `kbl-ai-developers` 에도 넣는다 |
-| `kbl-ai-developers` | AI 개발자 (에이전트 개발자) | kbl-models·kbl-maas `view`, **지정 프로젝트(`kai-agent`)에서 워크벤치**(ClusterRole `kbl-ai-workbench` + `view`), HardwareProfile 조회. **프로젝트 생성 불가** | Argo CD `kbl-ai` 조회/Sync, 대시보드 `allowedGroups`, MaaS 구독(API 키 발급) |
+| `kbl-ai-admins` | AI admin | `kbl-ai-developers` 권한 전부 + kbl-models 의 Gen AI playground(ClusterRole `kbl-ai-playground`) + **프로젝트 생성 가능**(만든 프로젝트의 admin). 클러스터 전체 view 없음 | Argo CD `kbl-ai` 조회/Sync, 대시보드 `allowedGroups`, MaaS 구독(API 키 발급) |
+| `kbl-ai-developers` | AI 개발자 (에이전트 개발자) | RHOAI 프로젝트(`kbl-models`·`kbl-maas`·`kai-agent`·`kbl-eval`) `view`, **지정 프로젝트(`kai-agent`)에서 워크벤치**(ClusterRole `kbl-ai-workbench`), HardwareProfile 조회. **프로젝트 생성 불가** | Argo CD `kbl-ai` 조회, 대시보드 `allowedGroups`, MaaS 구독(API 키 발급) |
 
+- OpenShift Group 은 중첩이 안 된다. developers 권한을 주는 곳(RoleBinding, `MaaSSubscription`·`MaaSAuthPolicy`, Auth `allowedGroups`, AppProject role)에는 항상 `kbl-ai-admins` 도 함께 넣는다. Argo CD `kbl-ai` 는 예외로 admins 가 Sync 까지 하는 별도 role(`admins`)이다
+- RHOAI 프로젝트 view 는 라벨로 고를 수 없어 프로젝트마다 RoleBinding 을 둔다. 새 RHOAI 프로젝트를 만들면 `kbl-ai-developers-view` 를 추가한다
 - 프로젝트 생성: OpenShift 기본 `self-provisioners`(로그인한 모든 사용자)를 덮어써 `kbl-ai-admins` 만 허용 (`ops/platform/rbac-self-provisioner.yaml`, autoupdate false)
 - AI 개발자의 워크벤치 롤은 Notebook·PVC·Secret·ConfigMap 만 쓸 수 있다. Deployment/Pod 직접 생성, NetworkPolicy·RoleBinding 변경 불가 (PoC 확인)
 - 대시보드는 프로젝트 화면을 그릴 때 사용자 권한으로 런타임·ISVC·프로파일·이미지 등을 읽는다. 지정 프로젝트에 `view` 가 없으면 "Create workbench" 가 막힌다 (audit 로그로 확인)
 - AI팀은 클러스터에서 모델을 직접 수정할 수 없다 (PoC 확인: `patch inferenceservice` → 거부). 바꾸려면 Git 에 커밋한다
-- 테스트 클러스터 사용자: htpasswd `ops`(kbl-ai-ops), `ai-admin`(kbl-ai-admins + developers), `ai`(kbl-ai-developers)
+- 테스트 클러스터 사용자: htpasswd `ops`(kbl-ai-ops), `ai-admin`(kbl-ai-admins, Auth `allowedGroups` 반영 전까지 developers 에도 둔다), `ai`(kbl-ai-developers)
 
 | | 운영팀 (`kbl-ai-ops`) | AI팀 (`kbl-ai-admins`, `kbl-ai-developers`) |
 |---|---|---|
@@ -575,3 +577,30 @@ GPU 가 넉넉하면 `deploymentStrategy` 를 RollingUpdate 로 바꿔 무중단
 - [LABELS-ANNOTATIONS.md](LABELS-ANNOTATIONS.md) — 라벨·annotation 근거
 - RHOAI 3.5: *Govern LLM access with Models-as-a-Service*, *Deploy models using distributed inference with llm-d*, *Deploying models*,
   *Working on projects*, *Working with accelerators*, *Managing OpenShift AI*
+
+## 15. 참고: RHOAI 대시보드 admin/user group 권한
+
+대시보드 **Settings → User management** 의 그룹은 Auth CR(`services.platform.opendatahub.io/v1alpha1`, kind `Auth`, name `auth`)에 저장된다.
+이 CR 은 openshift-cluster-gitops 리포에서 관리하므로 대시보드에서 바꾸면 selfHeal 이 되돌린다.
+
+| 대시보드 항목 | Auth CR 필드 | 현재 값 |
+|---|---|---|
+| administrator groups | `spec.adminGroups` | `rhods-admins`, `kbl-ai-ops` |
+| user groups | `spec.allowedGroups` | `kbl-ai-developers` (기본값 `system:authenticated` = 로그인한 모든 사용자) |
+
+RHOAI Operator 가 이 필드에 맞춰 만드는 RBAC (테스트 클러스터 조회, 2026-11-16. 롤 내용은 3.5 문서에 목록이 없다):
+
+| 그룹 | 바인딩 | 주요 권한 |
+|---|---|---|
+| adminGroups | Role `redhat-ods-applications/data-science-admingroup-role` | `auths` 수정, `hardwareprofiles`·`imagestreams`(워크벤치 이미지)·`templates`(서빙 런타임)·`llminferenceserviceconfigs`·NIM `accounts` 생성·수정·삭제, `odhdashboardconfigs`·`configmaps` 수정, `deployments` patch, `servingruntimes` create |
+| adminGroups | Role `models-as-a-service/data-science-admingroup-maas-role` | `maassubscriptions`, `maasauthpolicies` 생성·수정·삭제 |
+| adminGroups | Role `kuadrant-system/data-science-admingroup-kuadrant-role` | `metrics.k8s.io` pods |
+| adminGroups | ClusterRole `data-science-admingroupcluster-role` | `auths` patch, `datascienceclusters` update/patch, `modelregistries` 생성·수정·삭제, `storageclasses` 수정, users/groups 조회, `maasmodelrefs` 조회, Loki application 로그 조회 |
+| allowedGroups | ClusterRole `data-science-allowedgroupcluster-role` | `auths` 조회만 |
+
+- **user group** 은 사실상 대시보드 접근 허용 목록이다. 목록에 없으면 대시보드와 연관 서비스를 쓸 수 없다. 프로젝트 안에서 할 수 있는 일은 별도 RBAC(이 리포의 RoleBinding, `self-provisioners`)가 정한다
+- **admin group** 은 대시보드 Settings 메뉴와 모든 프로젝트의 파이프라인 설정에 더해, DSC·Auth·MaaS 구독/인가 정책까지 바꿀 수 있는 RHOAI 플랫폼 관리 권한이다. `auths` patch 가 있어 다른 그룹을 스스로 admin 으로 추가할 수 있으므로, cluster-admin 이 아닌 그룹에는 신중히 준다
+- **cluster-admin** 은 adminGroups 에 없어도 자동으로 RHOAI 관리자이고 위 권한을 모두 포함한다. `kbl-ai-ops` 를 adminGroups 에 둔 것은 의도 표기일 뿐 실효는 없다
+- `adminGroups`/`allowedGroups` 는 MLflow global prompt registry 네임스페이스의 `odh-group-mlflow-edit`/`-view` RoleBinding 에도 쓰인다 (현재 미사용)
+- 근거: RHOAI 3.5 *Managing OpenShift AI* 1.3 "Add users to OpenShift AI user groups", 1.4 "Select admin and user groups", 2.3 "Enable custom images in OpenShift AI";
+  *Release notes* 표 5.1; *Working with MLflow* 2.2절

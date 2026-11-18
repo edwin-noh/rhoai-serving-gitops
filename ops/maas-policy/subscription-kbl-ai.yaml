@@ -10,6 +10,7 @@ spec:
   owner:
     groups:
       - name: kbl-ai-developers
+      - name: kbl-ai-admins   # AI admin 도 같은 구독을 쓴다 (구독이 하나라 priority 영향 없음)
   modelRefs:
     - name: qwen3-1-7b
       namespace: kbl-maas
