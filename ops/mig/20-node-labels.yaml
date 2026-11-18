@@ -1,7 +1,8 @@
 # 노드별 MIG 구성 선택. Node 객체 전체가 아니라 라벨만 Server-Side Apply 로 소유한다
 # - 이 라벨 값을 바꾸면 mig-manager 가 그 노드의 GPU 를 다시 나눈다 (모델 중단, 재부팅 가능)
 # - Argo CD 가 Node 를 지우거나 prune 하지 않도록 Delete=false,Prune=false
-# - 노드 이름은 사이트 값으로 바꾼다. 노드가 여러 대면 문서를 더 추가한다
+# - 노드 이름은 사이트 값으로 바꾼다 (oc get nodes). 노드가 여러 대면 문서를 더 추가한다
+# - 구성 내용: 10-mig-config.yaml 의 kbl-dgx-b300-v1, 절차: mig적용방법.md
 apiVersion: v1
 kind: Node
 metadata:
@@ -9,4 +10,4 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: Delete=false,Prune=false
   labels:
-    nvidia.com/mig.config: dgx-b300-half-mig
+    nvidia.com/mig.config: kbl-dgx-b300-v1

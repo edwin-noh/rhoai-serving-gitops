@@ -1,12 +1,13 @@
 # MIG (Multi-Instance GPU) — Mixed 모드 GitOps 구성
 
-DGX B300(GPU 8장) 중 4장을 MIG 로 나누고 4장은 통 GPU 로 쓰는 구성을 GitOps 로 관리하기 위한 틀이다.
+KB Life DGX B300(GPU 8장)의 MIG 계획([`DGX_B300_MIG_모델할당.md`](../../DGX_B300_MIG_모델할당.md))을 GitOps 로 관리한다.
+**적용 순서는 [mig적용방법.md](mig적용방법.md)** 를 따른다.
 **테스트 클러스터에는 적용하지 않는다** (RTX 3060, `nvidia.com/mig.capable=false`).
 Argo CD 앱 `../gitops/apps/05-kbl-ops-mig.yaml` 은 파일 전체가 주석이라 동기화되지 않는다.
 
 > 근거: RHOAI 3.5 문서는 MIG 를 *Working with accelerators* 의 time-slicing 비교로만 언급한다.
 > 아래 MIG 동작(mig-manager, 라벨, 재분할 절차)은 NVIDIA GPU Operator 기준이며 **3.5 미확인**이다.
-> 프로파일 이름(`1g.35gb`, `3g.140gb`)은 예시다. B300 실물에서 `nvidia-smi mig -lgip` 로 확인해 바꾼다.
+> 프로파일 이름은 NVIDIA MIG User Guide 의 B300 288GB 표 기준(`1g.34gb`, `1g.67gb`, `2g.67gb` …). 장비에서 `nvidia-smi mig -lgip` 로 한 번 더 확인한다.
 
 ## 구조 (3개 층)
 
@@ -16,16 +17,19 @@ Argo CD 앱 `../gitops/apps/05-kbl-ops-mig.yaml` 은 파일 전체가 주석이�
 | 2. 분할 구성 | `10-mig-config.yaml` | ConfigMap `custom-mig-config` — GPU 별 프로파일 (mig-parted 형식) | 플랫폼 (Ops) |
 | | `20-node-labels.yaml` | 노드 라벨 `nvidia.com/mig.config=<구성 이름>` — 노드가 어떤 구성을 쓸지 | 플랫폼 (Ops) |
 | 3. 소비 | `30-hardwareprofile-mig.yaml` | MIG 조각 HardwareProfile (identifier = `nvidia.com/mig-<프로파일>`) | Ops |
-| | `40-resourcequota-mig.yaml` | 모델 네임스페이스의 MIG 조각 상한 (예시) | Ops |
+| | `40-resourcequota-mig.yaml` | `kbl-models` 의 MIG 조각 상한 | Ops |
 | | (AI 폴더) | 모델 `resources` 에 MIG 리소스 요청 | AI |
 
-예시 구성 `dgx-b300-half-mig`:
+구성 `kbl-dgx-b300-v1`:
 
-| GPU | 모드 | 노출 리소스 | 용도 |
-|---|---|---|---|
-| 0, 1 | MIG `1g.35gb` × 7 | `nvidia.com/mig-1g.35gb` (14개) | 소형 모델, 임베딩 |
-| 2, 3 | MIG `3g.140gb` × 2 | `nvidia.com/mig-3g.140gb` (4개) | 중형 모델 |
-| 4–7 | 통 GPU | `nvidia.com/gpu` (4개) | 대형 모델, tensor parallel |
+| GPU | 모드 | 용도 |
+|---|---|---|
+| 0, 1 | MIG `2g.67gb`×1 + `1g.34gb`×4 + `1g.67gb`×1 | OCR VLM1 · OCR VLM2 / Embedding·Reranker / 예비 · OCR worker |
+| 2–4 | MIG `2g.67gb`×3 + `1g.67gb`×1 | AI Agent · RAG |
+| 5 | MIG `2g.67gb`×3 + `1g.67gb`×1 | Scale-out buffer |
+| 6, 7 | 통 GPU | 유휴 |
+
+노드 리소스: `nvidia.com/mig-2g.67gb` 14, `nvidia.com/mig-1g.67gb` 6, `nvidia.com/mig-1g.34gb` 8, `nvidia.com/gpu` 2
 
 Mixed 모드에서는 이렇게 같은 노드에 MIG 조각과 통 GPU 가 함께 노출된다 (single 모드는 노드의 모든 GPU 가 같은 프로파일).
 
@@ -45,13 +49,13 @@ spec:
       - name: main
         resources:
           limits:
-            nvidia.com/mig-1g.35gb: "1"     # nvidia.com/gpu 대신 MIG 리소스 이름
+            nvidia.com/mig-1g.34gb: "1"     # nvidia.com/gpu 대신 MIG 리소스 이름
           requests:
-            nvidia.com/mig-1g.35gb: "1"
+            nvidia.com/mig-1g.34gb: "1"
 ```
 - MIG 조각 하나는 독립된 GPU 처럼 보인다 (메모리·장애 격리). 조각 여러 개로 tensor parallel 은 하지 않는다 — 큰 모델은 통 GPU 를 쓴다
 - vLLM `--gpu-memory-utilization`, `--max-model-len` 을 조각 메모리에 맞춘다
-- ISVC 라면 `opendatahub.io/hardware-profile-name: mig-1g-35gb` 로 프로파일을 고를 수 있다
+- ISVC 라면 `opendatahub.io/hardware-profile-name: mig-1g-34gb` 로 프로파일을 고를 수 있다
 
 ## MIG 구성을 바꾸면 일어나는 일
 
@@ -67,7 +71,7 @@ spec:
 
 ## 변경 절차
 
-예: GPU 2,3 을 `3g.140gb × 2` → `2g.70gb × 3` 으로 바꾼다.
+예: GPU 5(buffer)를 `2g.67gb × 3 + 1g.67gb` → `3g.135gb × 2` 로 바꾼다.
 
 **PR 1 — 영향 받는 모델 내리기 (AI팀, Ops 확인)**
 ```bash
@@ -77,7 +81,7 @@ oc get pods -A -o wide --field-selector spec.nodeName=<노드> | grep -v -E 'nvi
 해당 모델의 `replicas: 0`(LLMISVC) 또는 `serving.kserve.io/stop: "true"`(ISVC) 커밋 → sync → 파드 종료 확인
 
 **PR 2 — MIG 구성 변경 (Ops)**
-1. `10-mig-config.yaml` 에 새 구성(예: `dgx-b300-half-mig-v2`)을 **추가**한다 (기존 구성을 고치지 말고 새 이름으로 — 롤백이 쉽다)
+1. `10-mig-config.yaml` 에 새 구성(예: `kbl-dgx-b300-v2`)을 **추가**한다 (기존 구성을 고치지 말고 새 이름으로 — 롤백이 쉽다)
 2. `20-node-labels.yaml` 의 라벨 값을 새 구성 이름으로 바꾼다
 3. 커밋 후 Argo CD 에서 `kbl-ops-mig` 를 **수동 Sync**
 4. 완료 대기

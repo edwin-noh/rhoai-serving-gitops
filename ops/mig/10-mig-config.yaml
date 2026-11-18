@@ -1,6 +1,8 @@
 # MIG 분할 구성 (mig-parted 형식). 노드 라벨 nvidia.com/mig.config=<구성 이름> 으로 노드마다 고른다
-# - 프로파일 이름(1g.35gb 등)은 예시다. B300 실물에서 `nvidia-smi mig -lgip` 로 확인해 바꾼다
-# - 이 ConfigMap 을 바꾸는 것 자체가 GPU 재분할을 일으킬 수 있다. README 의 변경 절차를 따른다
+# - 계획: DGX_B300_MIG_모델할당.md, 적용 절차: mig적용방법.md
+# - 프로파일 이름은 NVIDIA MIG User Guide 의 B300 288GB 표 기준 (메모리 8조각 · SM 7조각).
+#   장비에서 `nvidia-smi mig -lgip` 로 한 번 더 확인한다
+# - 이 ConfigMap 의 구성 내용을 고치면 같은 구성을 쓰는 노드가 재분할된다. 바꿀 때는 새 이름(-v2)으로 추가한다 (README 변경 절차)
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -10,23 +12,33 @@ data:
   config.yaml: |
     version: v1
     mig-configs:
-      # MIG 를 쓰지 않음 (ClusterPolicy default)
+      # MIG 를 쓰지 않음 (ClusterPolicy default, 롤백용)
       all-disabled:
         - devices: all
           mig-enabled: false
 
-      # DGX B300: GPU 0-3 은 MIG, 4-7 은 통 GPU
-      dgx-b300-half-mig:
-        # GPU 0,1: 작은 조각 7개씩 (소형 모델·임베딩)
+      # KB Life DGX B300 v1
+      kbl-dgx-b300-v1:
+        # GPU 0,1: AI OCR / RAG Embedding (두 GPU 동일 구성)
+        #   2g.67gb x1  OCR VLM1 (27B, NVFP4)
+        #   1g.34gb x4  OCR VLM2 x2 (Qwen3-VL-8B) · Embedding/Reranker x1 · 예비 x1
+        #   1g.67gb x1  OCR worker
+        #   메모리 2+4+2=8, SM 2+4+1=7 (배치: 2g@0, 1g.34gb@2-5, 1g.67gb@6)
         - devices: [0, 1]
           mig-enabled: true
           mig-devices:
-            "1g.35gb": 7
-        # GPU 2,3: 중간 조각 2개씩 (중형 모델)
-        - devices: [2, 3]
+            "2g.67gb": 1
+            "1g.34gb": 4
+            "1g.67gb": 1
+        # GPU 2-4: AI Agent / RAG,  GPU 5: Scale-out buffer (같은 구성, 모델 미할당)
+        #   2g.67gb x3  AI Agent (27B, NVFP4)
+        #   1g.67gb x1  RAG
+        #   메모리 6+2=8, SM 6+1=7 (배치: 2g@0,2,4, 1g.67gb@6)
+        - devices: [2, 3, 4, 5]
           mig-enabled: true
           mig-devices:
-            "3g.140gb": 2
-        # GPU 4-7: 나누지 않음 (대형 모델, tensor parallel)
-        - devices: [4, 5, 6, 7]
+            "2g.67gb": 3
+            "1g.67gb": 1
+        # GPU 6,7: MIG 끔 (통 GPU, nvidia.com/gpu 로 노출)
+        - devices: [6, 7]
           mig-enabled: false
